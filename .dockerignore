@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/.turbo
+**/bin
+**/coverage
+**/Dockerfile
+.git
+.env
+.env.*
+*.log
+docker-compose.yml
+infra

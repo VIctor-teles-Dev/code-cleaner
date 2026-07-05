@@ -1,0 +1,33 @@
+# Roteamento por subdomínio:
+#   wbc.app.br      -> web-app (página principal)
+#   api.wbc.app.br  -> backend-api
+#
+# Para cada novo app, adicione uma regra seguindo o padrão:
+#   app1.wbc.app.br -> service do app1
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wbc
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: wbc.app.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-app
+                port:
+                  number: 3000
+    - host: api.wbc.app.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-api
+                port:
+                  number: 8080
