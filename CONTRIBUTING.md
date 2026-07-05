@@ -48,7 +48,9 @@ gh pr merge --squash --delete-branch
 
 ## Depois do merge
 
+Cada PR roda automaticamente o workflow de CI
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): testes, lint e build
+de todos os workspaces (Vitest, ESLint, `tsc`, `go test`, `go vet`).
+
 O deploy no cluster local (kind) é manual por enquanto — rebuild das imagens,
 `kind load` e `kubectl apply`, conforme o [infra/README.md](infra/README.md).
-O próximo passo do roadmap é um workflow de CI que rode testes e lint em cada
-PR, tornando os checks obrigatórios na proteção da `main`.
