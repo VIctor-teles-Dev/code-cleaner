@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: wbc
-      POSTGRES_PASSWORD: wbc
-      POSTGRES_DB: wbc
+      POSTGRES_USER: ccl
+      POSTGRES_PASSWORD: ccl
+      POSTGRES_DB: ccl
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wbc -d wbc"]
+      test: ["CMD-SHELL", "pg_isready -U ccl -d ccl"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -20,7 +20,7 @@ services:
       context: ./apps/backend-api
     environment:
       PORT: 8080
-      DATABASE_URL: postgres://wbc:wbc@postgres:5432/wbc?sslmode=disable
+      DATABASE_URL: postgres://ccl:ccl@postgres:5432/ccl?sslmode=disable
     ports:
       # host 8081 -> container 8080 (a 8080 do host está em uso por outro projeto)
       - "8081:8080"
@@ -34,6 +34,7 @@ services:
       dockerfile: apps/web-app/Dockerfile
     environment:
       PORT: 3000
+      BACKEND_URL: http://backend-api:8080
     ports:
       - "3000:3000"
     depends_on:

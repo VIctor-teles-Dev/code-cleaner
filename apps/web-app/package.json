@@ -11,11 +11,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@write-better-codes/ui-components": "workspace:*",
-    "@write-better-codes/utils": "workspace:*",
+    "@code-cleaner/ui-components": "workspace:*",
+    "@code-cleaner/utils": "workspace:*",
     "next": "16.2.10",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

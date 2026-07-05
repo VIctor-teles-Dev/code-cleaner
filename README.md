@@ -1,11 +1,11 @@
-# write-better-codes
+# code-cleaner
 
 Monorepo com frontend em Next.js (Bun + TypeScript) e backend em Go, orquestrado pelo Turborepo. O desenvolvimento segue TDD: escreva o teste primeiro, veja-o falhar, implemente, veja-o passar.
 
 ## Estrutura
 
 ```
-write-better-codes/
+code-cleaner/
 ├── apps/
 │   ├── web-app/          # Frontend Next.js (App Router, TypeScript, Vitest)
 │   ├── backend-api/      # API em Go (net/http, testes com httptest)
@@ -65,13 +65,15 @@ Exemplos de referência já no repositório:
 - `apps/web-app/src/app/page.test.tsx` — teste de componente React com Testing Library
 - `apps/backend-api/internal/handler/health_test.go` — teste de handler HTTP com `httptest`
 - `apps/backend-api/internal/handler/ready_test.go` — teste com dependência fake (interface `Pinger`)
+- `apps/backend-api/internal/db/migrate_test.go` — teste de integração com Postgres real (pulado sem `TEST_DATABASE_URL`)
 - `packages/utils/src/slugify.test.ts` — teste unitário de função pura
 - `packages/ui-components/src/button.test.tsx` — teste de componente compartilhado
 
 ## Docker e Kubernetes
 
-A aplicação roda com roteamento por subdomínio: `wbc.app.br` (web-app),
-`api.wbc.app.br` (backend-api) e `app1.wbc.app.br` para futuros apps.
+A aplicação roda com roteamento por subdomínio sob o domínio pai `ccl.app.br`:
+`code-cleaner.ccl.app.br` (web-app), `api.code-cleaner.ccl.app.br` (backend-api)
+e `<app>.ccl.app.br` para futuros apps.
 
 ```bash
 # stack local completa (web :3000, api :8081, postgres :5432)
@@ -81,12 +83,29 @@ docker compose up -d --build
 O deploy em Kubernetes (Ingress por subdomínio + PostgreSQL persistente) está
 documentado em [`infra/README.md`](infra/README.md).
 
+## Banco de dados e migrations
+
+As migrations SQL vivem em `apps/backend-api/internal/db/migrations/` e são
+embutidas no binário (`embed.FS`): o backend as aplica sozinho na inicialização
+quando `DATABASE_URL` está definida. A primeira migration cria a tabela `posts`
+do blog. Para rodar o teste de integração localmente:
+
+```bash
+docker run -d --rm --name ccl-test-pg -e POSTGRES_USER=ccl -e POSTGRES_PASSWORD=ccl \
+  -e POSTGRES_DB=ccl_test -p 5434:5432 postgres:17-alpine
+TEST_DATABASE_URL='postgres://ccl:ccl@localhost:5434/ccl_test?sslmode=disable' \
+  bunx turbo run test --filter=backend-api
+docker stop ccl-test-pg
+```
+
+No CI, um service container de Postgres roda esse teste em todo PR.
+
 ## Pacotes compartilhados
 
 Os pacotes são consumidos direto do código-fonte TypeScript (sem etapa de build).
 O `web-app` os declara em `transpilePackages` no `next.config.ts`:
 
 ```ts
-import { Button } from "@write-better-codes/ui-components";
-import { slugify } from "@write-better-codes/utils";
+import { Button } from "@code-cleaner/ui-components";
+import { slugify } from "@code-cleaner/utils";
 ```

@@ -1,17 +1,19 @@
-# Roteamento por subdomínio:
-#   wbc.app.br      -> web-app (página principal)
-#   api.wbc.app.br  -> backend-api
+# Roteamento por subdomínio sob o domínio pai ccl.app.br:
+#   code-cleaner.ccl.app.br      -> web-app (página principal)
+#   api.code-cleaner.ccl.app.br  -> backend-api
 #
-# Para cada novo app, adicione uma regra seguindo o padrão:
-#   app1.wbc.app.br -> service do app1
+# Para cada novo app, adicione regras seguindo o padrão:
+#   <app>.ccl.app.br     -> service do app
+#   api.<app>.ccl.app.br -> API do app (se houver)
+# O domínio raiz ccl.app.br fica reservado para um futuro hub/landing.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: wbc
+  name: ccl
 spec:
   ingressClassName: nginx
   rules:
-    - host: wbc.app.br
+    - host: code-cleaner.ccl.app.br
       http:
         paths:
           - path: /
@@ -21,7 +23,7 @@ spec:
                 name: web-app
                 port:
                   number: 3000
-    - host: api.wbc.app.br
+    - host: api.code-cleaner.ccl.app.br
       http:
         paths:
           - path: /

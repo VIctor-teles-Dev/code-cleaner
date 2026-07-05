@@ -2,10 +2,21 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "bin/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**",
+        "bin/**"
+      ]
     },
-    "test": {},
+    "test": {
+      "env": [
+        "TEST_DATABASE_URL"
+      ]
+    },
     "test:watch": {
       "cache": false,
       "persistent": true

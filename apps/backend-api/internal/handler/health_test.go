@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/VIctor-teles-Dev/write-better-codes/apps/backend-api/internal/handler"
+	"github.com/VIctor-teles-Dev/code-cleaner/apps/backend-api/internal/handler"
 )
 
 func TestHealth(t *testing.T) {

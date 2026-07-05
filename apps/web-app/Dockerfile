@@ -1,7 +1,7 @@
 # Build a partir da RAIZ do monorepo:
-#   docker build -f apps/web-app/Dockerfile -t wbc/web-app:dev .
+#   docker build -f apps/web-app/Dockerfile -t ccl/web-app:dev .
 
-FROM oven/bun:1.3-alpine AS deps
+FROM oven/bun:1.3.9-alpine AS deps
 WORKDIR /repo
 COPY package.json bun.lock turbo.json ./
 COPY apps/web-app/package.json apps/web-app/package.json
@@ -11,7 +11,7 @@ COPY packages/utils/package.json packages/utils/package.json
 COPY packages/ts-config/package.json packages/ts-config/package.json
 RUN bun install --frozen-lockfile
 
-FROM oven/bun:1.3-alpine AS builder
+FROM oven/bun:1.3.9-alpine AS builder
 WORKDIR /repo
 COPY --from=deps /repo ./
 COPY . .

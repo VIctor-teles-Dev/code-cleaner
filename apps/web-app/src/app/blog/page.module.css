@@ -1,0 +1,165 @@
+.page {
+  flex: 1;
+  width: 100%;
+  padding: 72px 24px 96px;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin-bottom: 12px;
+  font-family: var(--font-geist-mono);
+  font-size: 14px;
+  color: var(--brand);
+}
+
+.title {
+  margin-bottom: 16px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.subtitle {
+  margin-bottom: 48px;
+  font-size: 1.06rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.empty {
+  padding: 40px 0;
+  font-family: var(--font-geist-mono);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  list-style: none;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -24px 0 32px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.filterTag {
+  font-family: var(--font-geist-mono);
+  color: var(--brand);
+}
+
+.filterClear {
+  font-family: var(--font-geist-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 26px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* O link do título se estende sobre o card inteiro; as tags ficam acima */
+.postLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.date {
+  font-family: var(--font-geist-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.postTitle {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.excerpt {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.tags {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  list-style: none;
+}
+
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-geist-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--border-strong);
+    background: var(--surface);
+    transform: translateY(-2px);
+  }
+
+  .tag:hover {
+    border-color: var(--border-strong);
+    color: var(--brand);
+  }
+
+  .filterClear:hover {
+    color: var(--text-primary);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 48px 20px 72px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
