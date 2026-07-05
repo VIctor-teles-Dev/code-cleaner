@@ -59,6 +59,30 @@
   color: var(--brand);
 }
 
+.langSwitch {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.langButton {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--font-geist-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.langActive {
+  color: var(--brand);
+}
+
 .active::after {
   content: "";
   position: absolute;
@@ -75,7 +99,8 @@
     transform: scale(1.08);
   }
 
-  .link:hover {
+  .link:hover,
+  .langButton:hover {
     color: var(--text-primary);
     background: var(--surface);
   }

@@ -1,15 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { SiteHeader } from "./site-header";
 
-vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
-}));
-
 describe("SiteHeader", () => {
-  it("renders the brand link and main navigation", () => {
-    render(<SiteHeader />);
+  it("renders the brand link and main navigation", async () => {
+    render(await SiteHeader());
 
     expect(
       screen.getByRole("link", { name: /página inicial/i }),
@@ -25,8 +21,8 @@ describe("SiteHeader", () => {
     }
   });
 
-  it("marks the current route with aria-current", () => {
-    render(<SiteHeader />);
+  it("marks the current route with aria-current", async () => {
+    render(await SiteHeader());
 
     expect(screen.getByRole("link", { name: "Início" })).toHaveAttribute(
       "aria-current",
