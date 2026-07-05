@@ -23,9 +23,14 @@ export interface Post {
 
 // Fetch server-side direto no service interno; as páginas do blog são
 // dinâmicas (cache: no-store) para novos posts aparecerem sem rebuild.
-export async function getPosts(tag?: string): Promise<PostSummary[]> {
-  const query = tag ? `?tag=${encodeURIComponent(tag)}` : "";
-  const response = await fetch(`${BACKEND_URL}/posts${query}`, {
+// O locale é repassado ao backend, que resolve título/conteúdo/tags por idioma.
+export async function getPosts(
+  locale: string,
+  tag?: string,
+): Promise<PostSummary[]> {
+  const params = new URLSearchParams({ locale });
+  if (tag) params.set("tag", tag);
+  const response = await fetch(`${BACKEND_URL}/posts?${params}`, {
     cache: "no-store",
   });
   if (!response.ok) {
@@ -34,9 +39,13 @@ export async function getPosts(tag?: string): Promise<PostSummary[]> {
   return response.json();
 }
 
-export async function getPost(slug: string): Promise<Post | null> {
+export async function getPost(
+  locale: string,
+  slug: string,
+): Promise<Post | null> {
+  const params = new URLSearchParams({ locale });
   const response = await fetch(
-    `${BACKEND_URL}/posts/${encodeURIComponent(slug)}`,
+    `${BACKEND_URL}/posts/${encodeURIComponent(slug)}?${params}`,
     { cache: "no-store" },
   );
   if (response.status === 404) {
@@ -48,11 +57,11 @@ export async function getPost(slug: string): Promise<Post | null> {
   return response.json();
 }
 
-export function formatDate(iso: string | null): string {
+export function formatDate(iso: string | null, locale: string): string {
   if (!iso) {
     return "";
   }
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
