@@ -17,15 +17,29 @@ type PostStore struct {
 
 const publishedFilter = "p.published_at IS NOT NULL AND p.published_at <= now()"
 
-func (s PostStore) ListPublished(ctx context.Context, tagSlug string) ([]blog.Post, error) {
-	query := `SELECT p.slug, p.title, p.content, p.published_at
-	            FROM posts p
+// LATERAL que escolhe a tradução do locale pedido ($1) com fallback para o
+// default ($2). Reusado nas queries de post e de tag.
+const postTranslation = `JOIN LATERAL (
+	SELECT title, content FROM post_translations
+	 WHERE post_id = p.id AND locale IN ($1, $2)
+	 ORDER BY (locale = $1) DESC LIMIT 1
+) tr ON true`
+
+const tagTranslation = `JOIN LATERAL (
+	SELECT name FROM tag_translations
+	 WHERE tag_id = t.id AND locale IN ($1, $2)
+	 ORDER BY (locale = $1) DESC LIMIT 1
+) tt ON true`
+
+func (s PostStore) ListPublished(ctx context.Context, locale, tagSlug string) ([]blog.Post, error) {
+	query := `SELECT p.slug, tr.title, tr.content, p.published_at
+	            FROM posts p ` + postTranslation + `
 	           WHERE ` + publishedFilter
-	var args []any
+	args := []any{locale, blog.DefaultLocale}
 	if tagSlug != "" {
 		query += ` AND EXISTS (
 		    SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id
-		     WHERE pt.post_id = p.id AND t.slug = $1)`
+		     WHERE pt.post_id = p.id AND t.slug = $3)`
 		args = append(args, tagSlug)
 	}
 	query += " ORDER BY p.published_at DESC"
@@ -48,7 +62,7 @@ func (s PostStore) ListPublished(ctx context.Context, tagSlug string) ([]blog.Po
 		return nil, err
 	}
 
-	tagsBySlug, err := s.publishedPostTags(ctx)
+	tagsBySlug, err := s.publishedPostTags(ctx, locale)
 	if err != nil {
 		return nil, err
 	}
@@ -58,16 +72,16 @@ func (s PostStore) ListPublished(ctx context.Context, tagSlug string) ([]blog.Po
 	return posts, nil
 }
 
-// publishedPostTags carrega as tags de todos os posts publicados de uma vez,
-// evitando uma query por post na listagem.
-func (s PostStore) publishedPostTags(ctx context.Context) (map[string][]blog.Tag, error) {
+// publishedPostTags carrega as tags (no locale) de todos os posts publicados
+// de uma vez, evitando uma query por post na listagem.
+func (s PostStore) publishedPostTags(ctx context.Context, locale string) (map[string][]blog.Tag, error) {
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT p.slug, t.slug, t.name
+		`SELECT p.slug, t.slug, tt.name
 		   FROM posts p
 		   JOIN post_tags pt ON pt.post_id = p.id
-		   JOIN tags t ON t.id = pt.tag_id
+		   JOIN tags t ON t.id = pt.tag_id `+tagTranslation+`
 		  WHERE `+publishedFilter+`
-		  ORDER BY t.name`)
+		  ORDER BY tt.name`, locale, blog.DefaultLocale)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +99,14 @@ func (s PostStore) publishedPostTags(ctx context.Context) (map[string][]blog.Tag
 	return tags, rows.Err()
 }
 
-func (s PostStore) GetPublishedBySlug(ctx context.Context, slug string) (blog.Post, error) {
+func (s PostStore) GetPublishedBySlug(ctx context.Context, locale, slug string) (blog.Post, error) {
 	var p blog.Post
 	err := s.DB.QueryRowContext(ctx,
-		`SELECT p.slug, p.title, p.content, p.published_at
-		   FROM posts p
-		  WHERE p.slug = $1 AND `+publishedFilter,
-		slug).Scan(&p.Slug, &p.Title, &p.Content, &p.PublishedAt)
+		`SELECT p.slug, tr.title, tr.content, p.published_at
+		   FROM posts p `+postTranslation+`
+		  WHERE p.slug = $3 AND `+publishedFilter,
+		locale, blog.DefaultLocale, slug).
+		Scan(&p.Slug, &p.Title, &p.Content, &p.PublishedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return blog.Post{}, blog.ErrNotFound
 	}
@@ -100,12 +115,12 @@ func (s PostStore) GetPublishedBySlug(ctx context.Context, slug string) (blog.Po
 	}
 
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT t.slug, t.name
+		`SELECT t.slug, tt.name
 		   FROM post_tags pt
 		   JOIN tags t ON t.id = pt.tag_id
-		   JOIN posts p ON p.id = pt.post_id
-		  WHERE p.slug = $1
-		  ORDER BY t.name`, slug)
+		   JOIN posts p ON p.id = pt.post_id `+tagTranslation+`
+		  WHERE p.slug = $3
+		  ORDER BY tt.name`, locale, blog.DefaultLocale, slug)
 	if err != nil {
 		return blog.Post{}, err
 	}
@@ -121,7 +136,7 @@ func (s PostStore) GetPublishedBySlug(ctx context.Context, slug string) (blog.Po
 	return p, rows.Err()
 }
 
-func (s PostStore) Create(ctx context.Context, post blog.Post) error {
+func (s PostStore) Create(ctx context.Context, post blog.PostInput) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -130,9 +145,8 @@ func (s PostStore) Create(ctx context.Context, post blog.Post) error {
 
 	var postID int64
 	err = tx.QueryRowContext(ctx,
-		`INSERT INTO posts (slug, title, content, published_at)
-		 VALUES ($1, $2, $3, $4) RETURNING id`,
-		post.Slug, post.Title, post.Content, post.PublishedAt).Scan(&postID)
+		`INSERT INTO posts (slug, published_at) VALUES ($1, $2) RETURNING id`,
+		post.Slug, post.PublishedAt).Scan(&postID)
 
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -142,15 +156,33 @@ func (s PostStore) Create(ctx context.Context, post blog.Post) error {
 		return err
 	}
 
+	for locale, tr := range post.Translations {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO post_translations (post_id, locale, title, content)
+			 VALUES ($1, $2, $3, $4)`,
+			postID, locale, tr.Title, tr.Content); err != nil {
+			return err
+		}
+	}
+
 	for _, tag := range post.Tags {
 		var tagID int64
+		// upsert por slug; DO UPDATE no-op só para o RETURNING funcionar no conflito.
 		err = tx.QueryRowContext(ctx,
-			`INSERT INTO tags (slug, name) VALUES ($1, $2)
-			 ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
-			 RETURNING id`,
-			tag.Slug, tag.Name).Scan(&tagID)
+			`INSERT INTO tags (slug) VALUES ($1)
+			 ON CONFLICT (slug) DO UPDATE SET slug = EXCLUDED.slug
+			 RETURNING id`, tag.Slug).Scan(&tagID)
 		if err != nil {
 			return err
+		}
+		for locale, name := range tag.Names {
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO tag_translations (tag_id, locale, name)
+				 VALUES ($1, $2, $3)
+				 ON CONFLICT (tag_id, locale) DO UPDATE SET name = EXCLUDED.name`,
+				tagID, locale, name); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.ExecContext(ctx,
 			`INSERT INTO post_tags (post_id, tag_id) VALUES ($1, $2)
