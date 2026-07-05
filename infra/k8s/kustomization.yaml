@@ -5,7 +5,9 @@ resources:
   - namespace.yaml
   - postgres-sealed-secret.yaml
   - blog-admin-sealed-secret.yaml
+  - url-shortener-sealed-secret.yaml
   - postgres.yaml
   - backend-api.yaml
+  - url-shortener.yaml
   - web-app.yaml
   - ingress.yaml
