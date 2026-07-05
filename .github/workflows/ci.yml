@@ -14,20 +14,20 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: wbc
-          POSTGRES_PASSWORD: wbc
-          POSTGRES_DB: wbc_test
+          POSTGRES_USER: ccl
+          POSTGRES_PASSWORD: ccl
+          POSTGRES_DB: ccl_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U wbc -d wbc_test"
+          --health-cmd "pg_isready -U ccl -d ccl_test"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
 
     env:
       # habilita os testes de integração do backend (migrations contra Postgres real)
-      TEST_DATABASE_URL: postgres://wbc:wbc@localhost:5432/wbc_test?sslmode=disable
+      TEST_DATABASE_URL: postgres://ccl:ccl@localhost:5432/ccl_test?sslmode=disable
 
     steps:
       - uses: actions/checkout@v4

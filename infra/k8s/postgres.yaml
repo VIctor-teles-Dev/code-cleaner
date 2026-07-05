@@ -1,15 +1,5 @@
-# Credenciais de desenvolvimento — em produção, gere o Secret fora do git
-# (ex.: kubectl create secret, sealed-secrets ou external-secrets).
-apiVersion: v1
-kind: Secret
-metadata:
-  name: postgres-credentials
-type: Opaque
-stringData:
-  POSTGRES_USER: wbc
-  POSTGRES_PASSWORD: wbc-dev-password
-  POSTGRES_DB: wbc
----
+# O Secret postgres-credentials vem do SealedSecret em
+# postgres-sealed-secret.yaml — veja "Secrets" no infra/README.md.
 apiVersion: v1
 kind: Service
 metadata:
@@ -55,12 +45,12 @@ spec:
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "wbc", "-d", "wbc"]
+              command: ["pg_isready", "-U", "ccl", "-d", "ccl"]
             initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "wbc", "-d", "wbc"]
+              command: ["pg_isready", "-U", "ccl", "-d", "ccl"]
             initialDelaySeconds: 30
             periodSeconds: 10
           resources:

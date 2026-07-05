@@ -1,5 +1,5 @@
 # Cluster local kind com portas 80/443 mapeadas para o host,
-# permitindo acessar o Ingress via wbc.app.br (com entrada no /etc/hosts).
+# permitindo acessar o Ingress via *.ccl.app.br (com entradas no /etc/hosts).
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: web-app
-          image: wbc/web-app:dev
+          image: ccl/web-app:dev
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -23,6 +23,9 @@ spec:
               value: "3000"
             - name: HOSTNAME
               value: 0.0.0.0
+            # Destino do proxy same-origin /api/contact (service interno)
+            - name: BACKEND_URL
+              value: http://backend-api:8080
           readinessProbe:
             httpGet:
               path: /api/health

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend-api
-          image: wbc/backend-api:dev
+          image: ccl/backend-api:dev
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -38,6 +38,16 @@ spec:
                   key: POSTGRES_DB
             - name: DATABASE_URL
               value: postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)?sslmode=disable
+          # Notificações de email do formulário de contato (opcional).
+          # Crie o Secret smtp-credentials para habilitar — veja infra/README.md.
+          envFrom:
+            - secretRef:
+                name: smtp-credentials
+                optional: true
+            # Token do POST /posts (publicação no blog) — SealedSecret no repo
+            - secretRef:
+                name: blog-admin-token
+                optional: true
           readinessProbe:
             httpGet:
               path: /readyz
