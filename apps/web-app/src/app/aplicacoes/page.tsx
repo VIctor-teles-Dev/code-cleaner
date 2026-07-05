@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import styles from "./page.module.css";
 
@@ -13,10 +14,13 @@ interface AppEntry {
   description: string;
   stack: string[];
   url?: string;
+  screenshot?: string;
+  building?: boolean;
 }
 
 // Cada app do monorepo ganha um subdomínio em ccl.app.br via regra de
-// Ingress (infra/k8s/ingress.yaml). Sem url = ainda não publicado.
+// Ingress (infra/k8s/ingress.yaml). Sem url = ainda não publicado;
+// building = em construção (preview com screenshot, sem link ainda).
 const APPS: AppEntry[] = [
   {
     name: "code-cleaner",
@@ -24,6 +28,14 @@ const APPS: AppEntry[] = [
       "Este site: portfólio e blog com API própria em Go, posts em Markdown no PostgreSQL e formulário de contato com persistência primeiro.",
     stack: ["Next.js", "Go", "PostgreSQL", "Kubernetes"],
     url: "http://code-cleaner.ccl.app.br",
+  },
+  {
+    name: "url-shortener",
+    description:
+      "Encurtador de URLs com redirect de baixa latência (cache em memória), analytics de clique assíncrono e alias custom. API em Go no mesmo cluster; links curtos em curto.ccl.app.br.",
+    stack: ["Go", "PostgreSQL", "Next.js", "Kubernetes"],
+    screenshot: "/url-shortener.png",
+    building: true,
   },
   {
     name: "mobile-app",
@@ -53,18 +65,41 @@ export default function Aplicacoes() {
 
         <ul className={styles.grid}>
           {APPS.map((app) => {
-            const online = Boolean(app.url);
+            const status = app.building
+              ? "building"
+              : app.url
+                ? "online"
+                : "soon";
+            const dotClass =
+              status === "online"
+                ? styles.dotOnline
+                : status === "building"
+                  ? styles.dotBuilding
+                  : styles.dotSoon;
+            const statusLabel =
+              status === "online"
+                ? "online"
+                : status === "building"
+                  ? "em construção"
+                  : "em breve";
+
             const body = (
               <>
+                {app.screenshot && (
+                  <div className={styles.thumb}>
+                    <Image
+                      src={app.screenshot}
+                      alt={`Screenshot da aplicação ${app.name}`}
+                      fill
+                      sizes="(max-width: 600px) 100vw, 340px"
+                      className={styles.thumbImg}
+                    />
+                  </div>
+                )}
                 <div className={styles.cardHeader}>
-                  <span
-                    className={online ? styles.dotOnline : styles.dotSoon}
-                    aria-hidden="true"
-                  />
+                  <span className={dotClass} aria-hidden="true" />
                   <h2 className={styles.appName}>{app.name}</h2>
-                  <span className={styles.status}>
-                    {online ? "online" : "em breve"}
-                  </span>
+                  <span className={styles.status}>{statusLabel}</span>
                 </div>
                 <p className={styles.description}>{app.description}</p>
                 <ul className={styles.stack} aria-label="Stack">
@@ -79,7 +114,7 @@ export default function Aplicacoes() {
 
             return (
               <li key={app.name}>
-                {online ? (
+                {status === "online" ? (
                   <a href={app.url} className={styles.card}>
                     {body}
                     <span className={styles.open} aria-hidden="true">
@@ -87,7 +122,13 @@ export default function Aplicacoes() {
                     </span>
                   </a>
                 ) : (
-                  <div className={`${styles.card} ${styles.cardSoon}`}>
+                  <div
+                    className={
+                      status === "soon"
+                        ? `${styles.card} ${styles.cardSoon}`
+                        : styles.card
+                    }
+                  >
                     {body}
                   </div>
                 )}
