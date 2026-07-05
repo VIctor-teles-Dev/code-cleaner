@@ -1,0 +1,170 @@
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 72px 24px 96px;
+}
+
+.intro {
+  display: flex;
+  align-items: center;
+  gap: clamp(32px, 6vw, 72px);
+}
+
+.photoFrame {
+  position: relative;
+  flex-shrink: 0;
+  width: min(320px, 100%);
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      120% 90% at 30% 20%,
+      rgba(52, 211, 153, 0.14),
+      transparent 60%
+    ),
+    var(--surface);
+  overflow: hidden;
+}
+
+.photo {
+  object-fit: cover;
+}
+
+/* Cantos de mira, estilo viewfinder */
+.photoFrame::before,
+.photoFrame::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--brand);
+  pointer-events: none;
+}
+
+.photoFrame::before {
+  top: 10px;
+  left: 10px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 10px;
+}
+
+.photoFrame::after {
+  bottom: 10px;
+  right: 10px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 10px;
+}
+
+.bio {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin-bottom: 12px;
+  font-family: var(--font-geist-mono);
+  font-size: 14px;
+  color: var(--brand);
+}
+
+.title {
+  margin-bottom: 20px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.bio p + p {
+  margin-top: 16px;
+}
+
+.bio p:not(.eyebrow) {
+  max-width: 56ch;
+  font-size: 1.06rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+.techSection {
+  margin-top: 88px;
+}
+
+.techTitle {
+  margin-bottom: 28px;
+  font-size: clamp(1.3rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.techGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  list-style: none;
+}
+
+.techCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.techName {
+  font-family: var(--font-geist-mono);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--brand);
+}
+
+.techRole {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .techCard:hover {
+    border-color: var(--border-strong);
+    background: var(--surface);
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 820px) {
+  .page {
+    padding: 48px 20px 72px;
+  }
+
+  .intro {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .photoFrame {
+    width: min(280px, 100%);
+  }
+
+  .techSection {
+    margin-top: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .techCard {
+    transition: none;
+  }
+}

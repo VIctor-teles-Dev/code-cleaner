@@ -1,0 +1,153 @@
+.page {
+  flex: 1;
+  width: 100%;
+  padding: 72px 24px 96px;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin-bottom: 12px;
+  font-family: var(--font-geist-mono);
+  font-size: 14px;
+  color: var(--brand);
+}
+
+.title {
+  margin-bottom: 16px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.subtitle {
+  max-width: 46rem;
+  margin-bottom: 48px;
+  font-size: 1.06rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.domain {
+  font-family: var(--font-geist-mono);
+  font-size: 0.92em;
+  color: var(--brand);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 18px;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 24px 26px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cardSoon {
+  opacity: 0.65;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dotOnline,
+.dotSoon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotOnline {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.8);
+}
+
+.dotSoon {
+  background: var(--text-muted);
+}
+
+.appName {
+  font-family: var(--font-geist-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.status {
+  margin-left: auto;
+  font-family: var(--font-geist-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.description {
+  flex: 1;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+}
+
+.tech {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-geist-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.open {
+  font-family: var(--font-geist-mono);
+  font-size: 12.5px;
+  color: var(--brand);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a.card:hover {
+    border-color: var(--border-strong);
+    background: var(--surface);
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 48px 20px 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
