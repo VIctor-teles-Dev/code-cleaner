@@ -6,6 +6,7 @@ WORKDIR /repo
 COPY package.json bun.lock turbo.json ./
 COPY apps/web-app/package.json apps/web-app/package.json
 COPY apps/backend-api/package.json apps/backend-api/package.json
+COPY apps/url-shortener/package.json apps/url-shortener/package.json
 COPY packages/ui-components/package.json packages/ui-components/package.json
 COPY packages/utils/package.json packages/utils/package.json
 COPY packages/ts-config/package.json packages/ts-config/package.json
