@@ -6,7 +6,7 @@ import (
 )
 
 func TestMigrateWithUnreachableDatabase(t *testing.T) {
-	pool, err := Open("postgres://wbc:wbc@localhost:1/wbc?sslmode=disable")
+	pool, err := Open("postgres://ccl:ccl@localhost:1/ccl?sslmode=disable")
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

@@ -1,4 +1,4 @@
-module github.com/VIctor-teles-Dev/write-better-codes/apps/backend-api
+module github.com/VIctor-teles-Dev/code-cleaner/apps/backend-api
 
 go 1.26
 

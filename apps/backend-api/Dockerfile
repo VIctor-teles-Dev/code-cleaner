@@ -1,5 +1,5 @@
 # Build a partir de apps/backend-api:
-#   docker build -t wbc/backend-api:dev apps/backend-api
+#   docker build -t ccl/backend-api:dev apps/backend-api
 
 FROM golang:1.26-alpine AS builder
 WORKDIR /src
