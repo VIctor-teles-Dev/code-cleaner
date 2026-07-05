@@ -1,0 +1,28 @@
+name: Deploy
+
+# Roda DEPOIS que o CI passa num push para a main. O job executa num runner
+# self-hosted NA VPS: ele puxa o repo (checkout), builda as imagens e aplica
+# no cluster k3s via infra/deploy.sh.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+# Um deploy por vez (sem cancelar o que está em andamento).
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Só deploya se o CI concluiu com sucesso.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: [self-hosted, ccl-vps]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Deploya exatamente o commit que passou no CI.
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Deploy no k3s
+        run: bash infra/deploy.sh
