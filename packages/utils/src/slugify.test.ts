@@ -4,7 +4,7 @@ import { slugify } from "./slugify";
 
 describe("slugify", () => {
   it("lowercases and replaces spaces with hyphens", () => {
-    expect(slugify("Write Better Codes")).toBe("write-better-codes");
+    expect(slugify("Code Cleaner")).toBe("code-cleaner");
   });
 
   it("removes accents", () => {
