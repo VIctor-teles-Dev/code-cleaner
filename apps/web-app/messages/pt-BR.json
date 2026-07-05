@@ -1,0 +1,139 @@
+{
+  "metadata": {
+    "defaultTitle": "code-cleaner",
+    "titleTemplate": "%s · code-cleaner",
+    "description": "Transformando café em código limpo, arquitetura escalável e aplicações que resolvem problemas reais."
+  },
+  "nav": {
+    "home": "Início",
+    "about": "Sobre",
+    "apps": "Aplicações",
+    "blog": "Blog",
+    "contact": "Contato",
+    "ariaLabel": "Navegação principal",
+    "brandAriaLabel": "code-cleaner — página inicial"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Idioma",
+    "pt-BR": "PT",
+    "en": "EN"
+  },
+  "home": {
+    "badge": "Disponível para novos projetos",
+    "eyebrow": "Olá, mundo! Eu sou o desenvolvedor por trás do",
+    "subtitle": "Transformando café em código limpo, arquitetura escalável e aplicações que resolvem problemas reais.",
+    "ctaProjects": "Ver projetos",
+    "ctaBlog": "Ler o blog",
+    "stackAriaLabel": "Principais tecnologias"
+  },
+  "about": {
+    "title": "Sobre",
+    "description": "Quem está por trás do code-cleaner: objetivos, stack e forma de trabalhar.",
+    "eyebrow": "$ whoami",
+    "heading": "Sobre mim",
+    "photoAlt": "Foto de Victor Teles",
+    "bio1": "Olá! Eu sou o Victor, desenvolvedor full stack apaixonado por transformar problemas complexos em soluções simples. Trabalho do banco de dados à interface — backend em Go, frontend com React e Next.js — sempre guiado por testes e por código que a próxima pessoa consegue ler.",
+    "bio2": "Meu objetivo é construir aplicações que resolvem problemas reais, com arquitetura escalável e deploys previsíveis. Este site é meu laboratório: cada funcionalidade nasce com TDD, passa por CI e roda em Kubernetes — e o que aprendo no caminho vira artigo no blog.",
+    "techHeading": "Tecnologias com que trabalho",
+    "roles": {
+      "go": "APIs e serviços de backend",
+      "typescript": "Tipagem forte do front ao back",
+      "react": "Interfaces modernas com SSR",
+      "postgresql": "Modelagem e persistência de dados",
+      "docker": "Ambientes reproduzíveis",
+      "kubernetes": "Orquestração e deploys resilientes",
+      "monorepo": "Monorepos com DX rápida",
+      "ci": "CI/CD em cada pull request"
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Artigos sobre código limpo, arquitetura e o que aprendo construindo aplicações reais.",
+    "eyebrow": "$ ls blog/",
+    "eyebrowFiltered": "$ ls blog/ | grep \"{tag}\"",
+    "heading": "Blog",
+    "subtitle": "O que eu aprendo construindo — código limpo, arquitetura e as decisões por trás deste site.",
+    "filteringBy": "Filtrando por ",
+    "clearFilter": "limpar filtro ×",
+    "emptyTag": "// nenhum post com essa tag",
+    "emptyAll": "// nenhum post publicado ainda — volte em breve",
+    "tagsAriaLabel": "Tags",
+    "notFound": "Post não encontrado",
+    "back": "← Voltar para o blog"
+  },
+  "apps": {
+    "title": "Aplicações",
+    "description": "As aplicações do monorepo, cada uma no seu subdomínio de ccl.app.br.",
+    "eyebrow": "$ ls aplicacoes/",
+    "heading": "Aplicações",
+    "subtitlePrefix": "Os apps deste monorepo, cada um servido no seu próprio subdomínio de ",
+    "subtitleSuffix": " pelo mesmo cluster Kubernetes.",
+    "stackAriaLabel": "Stack",
+    "screenshotAlt": "Screenshot da aplicação {name}",
+    "status": {
+      "online": "online",
+      "building": "em construção",
+      "soon": "em breve"
+    },
+    "items": {
+      "code-cleaner": "Este site: portfólio e blog com API própria em Go, posts em Markdown no PostgreSQL e formulário de contato com persistência primeiro.",
+      "url-shortener": "Encurtador de URLs com redirect de baixa latência (cache em memória), analytics de clique assíncrono e alias custom. API em Go no mesmo cluster; links curtos em curto.ccl.app.br.",
+      "mobile-app": "Futuro app mobile do ecossistema, compartilhando os pacotes de UI e utilitários do monorepo.",
+      "docs": "Futura central de documentação técnica dos projetos — arquitetura, decisões e guias de contribuição."
+    }
+  },
+  "contact": {
+    "title": "Contato",
+    "description": "Fale comigo: mande sua mensagem e eu respondo por email.",
+    "eyebrow": "$ mail victor",
+    "heading": "Contato",
+    "subtitle": "Tem um projeto em mente, uma vaga ou só quer trocar uma ideia sobre código? Me manda uma mensagem — eu leio todas e respondo por email.",
+    "name": "Nome",
+    "email": "Email",
+    "message": "Mensagem",
+    "sending": "Enviando…",
+    "submit": "Enviar mensagem",
+    "hint": "Sua mensagem fica registrada e eu recebo uma notificação.",
+    "error": "Não foi possível enviar agora. Tente de novo em instantes.",
+    "successTitle": "Mensagem enviada ✓",
+    "successText": "Obrigado pelo contato! Respondo no email que você informou.",
+    "sendAnother": "Enviar outra mensagem"
+  },
+  "shortener": {
+    "title": "Encurtador",
+    "description": "Encurtador de URLs com redirecionamento de baixa latência e analytics de clique — API em Go rodando no mesmo cluster Kubernetes.",
+    "eyebrow": "$ curl -X POST /api/v1/urls",
+    "heading": "Encurtador de URL",
+    "subtitle": "Cole uma URL longa e receba um link curto. O redirecionamento é servido por uma API em Go (cache em memória para os links quentes) e cada clique alimenta o painel de métricas de forma assíncrona, sem atrasar o redirect.",
+    "urlLabel": "URL de destino",
+    "urlPlaceholder": "https://exemplo.com/uma/pagina/bem/longa",
+    "aliasLabel": "Alias custom (opcional)",
+    "aliasPlaceholder": "minha-marca",
+    "expiresLabel": "Expira em (opcional)",
+    "shortening": "Encurtando…",
+    "submit": "Encurtar",
+    "hint": "Slug base62 de 7 caracteres, ou o seu alias.",
+    "createError": "Não foi possível encurtar agora.",
+    "resultLabel": "Link curto",
+    "copied": "copiado ✓",
+    "copy": "copiar",
+    "metricsAriaLabel": "Métricas de clique",
+    "metricsHeading": "Métricas",
+    "slugPlaceholder": "código do link (ex: aB3x9)",
+    "slugAriaLabel": "Código do link",
+    "viewMetrics": "Ver métricas",
+    "loading": "Carregando…",
+    "notFound": "Nenhum link com esse código.",
+    "metricsError": "Não foi possível carregar as métricas.",
+    "panelDay": "Cliques por dia",
+    "panelCountries": "Países",
+    "panelBrowsers": "Navegadores",
+    "panelDevices": "Dispositivos",
+    "panelReferrers": "Referrers",
+    "emptyClicks": "Sem cliques ainda.",
+    "emptyCountries": "Sem dados de país.",
+    "emptyData": "Sem dados.",
+    "emptyReferrers": "Acessos diretos.",
+    "clicksLabel": "{count, plural, one {clique em} other {cliques em}}"
+  }
+}
