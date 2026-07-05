@@ -15,6 +15,11 @@ O backend valida a conexão no endpoint `/readyz` (readiness probe) — se o
 banco cair, os pods saem do balanceamento sem serem reiniciados; `/healthz`
 segue como liveness probe, sem dependências externas.
 
+Na inicialização, o backend aplica as migrations embutidas no binário
+(golang-migrate). É seguro com múltiplas réplicas: o driver serializa via
+advisory lock do Postgres e um banco já migrado é no-op. Não há passo manual
+de migração no deploy — basta subir a imagem nova.
+
 ## Docker Compose (dev local)
 
 Na raiz do repositório:

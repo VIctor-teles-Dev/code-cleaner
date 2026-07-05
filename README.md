@@ -65,6 +65,7 @@ Exemplos de referência já no repositório:
 - `apps/web-app/src/app/page.test.tsx` — teste de componente React com Testing Library
 - `apps/backend-api/internal/handler/health_test.go` — teste de handler HTTP com `httptest`
 - `apps/backend-api/internal/handler/ready_test.go` — teste com dependência fake (interface `Pinger`)
+- `apps/backend-api/internal/db/migrate_test.go` — teste de integração com Postgres real (pulado sem `TEST_DATABASE_URL`)
 - `packages/utils/src/slugify.test.ts` — teste unitário de função pura
 - `packages/ui-components/src/button.test.tsx` — teste de componente compartilhado
 
@@ -80,6 +81,23 @@ docker compose up -d --build
 
 O deploy em Kubernetes (Ingress por subdomínio + PostgreSQL persistente) está
 documentado em [`infra/README.md`](infra/README.md).
+
+## Banco de dados e migrations
+
+As migrations SQL vivem em `apps/backend-api/internal/db/migrations/` e são
+embutidas no binário (`embed.FS`): o backend as aplica sozinho na inicialização
+quando `DATABASE_URL` está definida. A primeira migration cria a tabela `posts`
+do blog. Para rodar o teste de integração localmente:
+
+```bash
+docker run -d --rm --name wbc-test-pg -e POSTGRES_USER=wbc -e POSTGRES_PASSWORD=wbc \
+  -e POSTGRES_DB=wbc_test -p 5434:5432 postgres:17-alpine
+TEST_DATABASE_URL='postgres://wbc:wbc@localhost:5434/wbc_test?sslmode=disable' \
+  bunx turbo run test --filter=backend-api
+docker stop wbc-test-pg
+```
+
+No CI, um service container de Postgres roda esse teste em todo PR.
 
 ## Pacotes compartilhados
 

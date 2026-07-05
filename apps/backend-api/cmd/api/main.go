@@ -22,6 +22,12 @@ func main() {
 			log.Fatalf("invalid DATABASE_URL: %v", err)
 		}
 		defer pool.Close()
+
+		if err := db.Migrate(pool); err != nil {
+			log.Fatalf("migrations: %v", err)
+		}
+		log.Print("database migrations applied")
+
 		pinger = pool
 	} else {
 		log.Print("DATABASE_URL not set; /readyz will not check the database")
