@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Blog from "./page";
 
+const params = Promise.resolve({ locale: "pt-BR" });
+
 function stubPosts(posts: unknown) {
   vi.stubGlobal(
     "fetch",
@@ -28,7 +30,7 @@ describe("Blog", () => {
       },
     ]);
 
-    render(await Blog({}));
+    render(await Blog({ params }));
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Blog" }),
@@ -51,12 +53,13 @@ describe("Blog", () => {
 
     render(
       await Blog({
+        params,
         searchParams: Promise.resolve({ tag: "minhas-aplicacoes" }),
       }),
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/posts?tag=minhas-aplicacoes"),
+      expect.stringContaining("tag=minhas-aplicacoes"),
       expect.anything(),
     );
     expect(screen.getByText(/filtrando por/i)).toBeInTheDocument();
@@ -69,7 +72,7 @@ describe("Blog", () => {
   it("shows the empty state when there are no posts", async () => {
     stubPosts([]);
 
-    render(await Blog({}));
+    render(await Blog({ params }));
 
     expect(screen.getByText(/nenhum post publicado/i)).toBeInTheDocument();
   });

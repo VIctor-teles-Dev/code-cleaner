@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 
 import styles from "./page.module.css";
@@ -33,16 +34,21 @@ interface Analytics {
 
 type CreateStatus = "idle" | "sending" | "error";
 type StatsStatus = "idle" | "loading" | "error";
+type StatsErrorKey = "notFound" | "metricsError";
 
 export function EncurtadorForm() {
+  const t = useTranslations("shortener");
+  const locale = useLocale();
+
   const [createStatus, setCreateStatus] = useState<CreateStatus>("idle");
-  const [createError, setCreateError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedLink | null>(null);
   const [copied, setCopied] = useState(false);
 
   const [slugQuery, setSlugQuery] = useState("");
   const [statsStatus, setStatsStatus] = useState<StatsStatus>("idle");
-  const [statsError, setStatsError] = useState<string | null>(null);
+  const [statsErrorKey, setStatsErrorKey] = useState<StatsErrorKey>(
+    "metricsError",
+  );
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -57,7 +63,6 @@ export function EncurtadorForm() {
     if (expireAt) payload.expire_at = new Date(expireAt).toISOString();
 
     setCreateStatus("sending");
-    setCreateError(null);
     setCopied(false);
 
     try {
@@ -66,24 +71,17 @@ export function EncurtadorForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = await res.json().catch(() => null);
 
       if (res.ok) {
-        const link = body as CreatedLink;
+        const link = (await res.json()) as CreatedLink;
         setCreated(link);
         setSlugQuery(link.slug);
         setAnalytics(null);
         setCreateStatus("idle");
         return;
       }
-      setCreateError(
-        body && typeof body.error === "string"
-          ? body.error
-          : "Não foi possível encurtar agora.",
-      );
       setCreateStatus("error");
     } catch {
-      setCreateError("Não foi possível encurtar agora.");
       setCreateStatus("error");
     }
   }
@@ -93,28 +91,22 @@ export function EncurtadorForm() {
     if (!target) return;
 
     setStatsStatus("loading");
-    setStatsError(null);
     try {
       const res = await fetch(
         `/api/encurtador/analytics/${encodeURIComponent(target)}`,
       );
-      const body = await res.json().catch(() => null);
 
       if (res.ok) {
-        setAnalytics(body as Analytics);
+        setAnalytics((await res.json()) as Analytics);
         setStatsStatus("idle");
         return;
       }
       setAnalytics(null);
-      setStatsError(
-        res.status === 404
-          ? "Nenhum link com esse código."
-          : "Não foi possível carregar as métricas.",
-      );
+      setStatsErrorKey(res.status === 404 ? "notFound" : "metricsError");
       setStatsStatus("error");
     } catch {
       setAnalytics(null);
-      setStatsError("Não foi possível carregar as métricas.");
+      setStatsErrorKey("metricsError");
       setStatsStatus("error");
     }
   }
@@ -133,30 +125,30 @@ export function EncurtadorForm() {
     <>
       <form className={styles.form} onSubmit={handleCreate}>
         <div className={styles.field}>
-          <label htmlFor="url-original">URL de destino</label>
+          <label htmlFor="url-original">{t("urlLabel")}</label>
           <input
             id="url-original"
             name="original_url"
             type="url"
-            placeholder="https://exemplo.com/uma/pagina/bem/longa"
+            placeholder={t("urlPlaceholder")}
             required
           />
         </div>
 
         <div className={styles.row}>
           <div className={styles.field}>
-            <label htmlFor="url-alias">Alias custom (opcional)</label>
+            <label htmlFor="url-alias">{t("aliasLabel")}</label>
             <input
               id="url-alias"
               name="custom_alias"
               type="text"
-              placeholder="minha-marca"
+              placeholder={t("aliasPlaceholder")}
               maxLength={40}
               pattern="[A-Za-z0-9_-]+"
             />
           </div>
           <div className={styles.field}>
-            <label htmlFor="url-expira">Expira em (opcional)</label>
+            <label htmlFor="url-expira">{t("expiresLabel")}</label>
             <input id="url-expira" name="expire_at" type="datetime-local" />
           </div>
         </div>
@@ -167,19 +159,19 @@ export function EncurtadorForm() {
             className={styles.submit}
             disabled={createStatus === "sending"}
           >
-            {createStatus === "sending" ? "Encurtando…" : "Encurtar"}
+            {createStatus === "sending" ? t("shortening") : t("submit")}
           </button>
-          <p className={styles.hint}>Slug base62 de 7 caracteres, ou o seu alias.</p>
+          <p className={styles.hint}>{t("hint")}</p>
         </div>
 
         <p className={styles.error} role="alert" aria-live="polite">
-          {createStatus === "error" ? createError : ""}
+          {createStatus === "error" ? t("createError") : ""}
         </p>
       </form>
 
       {created && (
         <div className={styles.result} role="status">
-          <span className={styles.resultLabel}>Link curto</span>
+          <span className={styles.resultLabel}>{t("resultLabel")}</span>
           <div className={styles.resultRow}>
             <a
               className={styles.resultUrl}
@@ -194,22 +186,22 @@ export function EncurtadorForm() {
               className={styles.copyButton}
               onClick={copyShortUrl}
             >
-              {copied ? "copiado ✓" : "copiar"}
+              {copied ? t("copied") : t("copy")}
             </button>
           </div>
           <p className={styles.resultOriginal}>→ {created.original_url}</p>
         </div>
       )}
 
-      <section className={styles.analytics} aria-label="Métricas de clique">
-        <h2 className={styles.analyticsTitle}>Métricas</h2>
+      <section className={styles.analytics} aria-label={t("metricsAriaLabel")}>
+        <h2 className={styles.analyticsTitle}>{t("metricsHeading")}</h2>
         <div className={styles.lookup}>
           <input
             className={styles.lookupInput}
             value={slugQuery}
             onChange={(e) => setSlugQuery(e.target.value)}
-            placeholder="código do link (ex: aB3x9)"
-            aria-label="Código do link"
+            placeholder={t("slugPlaceholder")}
+            aria-label={t("slugAriaLabel")}
           />
           <button
             type="button"
@@ -217,13 +209,13 @@ export function EncurtadorForm() {
             onClick={() => loadAnalytics(slugQuery)}
             disabled={statsStatus === "loading" || slugQuery.trim() === ""}
           >
-            {statsStatus === "loading" ? "Carregando…" : "Ver métricas"}
+            {statsStatus === "loading" ? t("loading") : t("viewMetrics")}
           </button>
         </div>
 
         {statsStatus === "error" && (
           <p className={styles.error} role="alert">
-            {statsError}
+            {t(statsErrorKey)}
           </p>
         )}
 
@@ -234,39 +226,39 @@ export function EncurtadorForm() {
                 {analytics.total_clicks}
               </span>
               <span className={styles.totalLabel}>
-                {analytics.total_clicks === 1 ? "clique" : "cliques"} em{" "}
+                {t("clicksLabel", { count: analytics.total_clicks })}{" "}
                 <code>{analytics.slug}</code>
               </span>
             </div>
 
             <div className={styles.panels}>
               <BarList
-                title="Cliques por dia"
+                title={t("panelDay")}
                 items={analytics.time_series.map((d) => ({
-                  label: formatDay(d.day),
+                  label: formatDay(d.day, locale),
                   count: d.count,
                 }))}
-                empty="Sem cliques ainda."
+                empty={t("emptyClicks")}
               />
               <BarList
-                title="Países"
+                title={t("panelCountries")}
                 items={analytics.top_countries}
-                empty="Sem dados de país."
+                empty={t("emptyCountries")}
               />
               <BarList
-                title="Navegadores"
+                title={t("panelBrowsers")}
                 items={analytics.browsers}
-                empty="Sem dados."
+                empty={t("emptyData")}
               />
               <BarList
-                title="Dispositivos"
+                title={t("panelDevices")}
                 items={analytics.devices}
-                empty="Sem dados."
+                empty={t("emptyData")}
               />
               <BarList
-                title="Referrers"
+                title={t("panelReferrers")}
                 items={analytics.top_referrers}
-                empty="Acessos diretos."
+                empty={t("emptyReferrers")}
               />
             </div>
           </div>
@@ -313,8 +305,8 @@ function BarList({
   );
 }
 
-function formatDay(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+function formatDay(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     timeZone: "UTC",

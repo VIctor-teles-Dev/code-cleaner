@@ -39,7 +39,7 @@ describe("ContactForm", () => {
     });
   });
 
-  it("shows the backend validation message on error", async () => {
+  it("shows a localized error on a failed response", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -54,7 +54,7 @@ describe("ContactForm", () => {
     await fillAndSubmit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "email inválido",
+      /não foi possível enviar/i,
     );
   });
 

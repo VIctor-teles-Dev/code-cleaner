@@ -3,17 +3,19 @@ import { describe, expect, it } from "vitest";
 
 import Encurtador from "./page";
 
+const params = Promise.resolve({ locale: "pt-BR" });
+
 describe("Encurtador", () => {
-  it("renders the page heading", () => {
-    render(<Encurtador />);
+  it("renders the page heading", async () => {
+    render(await Encurtador({ params }));
 
     expect(
       screen.getByRole("heading", { level: 1, name: /encurtador de url/i }),
     ).toBeInTheDocument();
   });
 
-  it("shows the create form fields", () => {
-    render(<Encurtador />);
+  it("shows the create form fields", async () => {
+    render(await Encurtador({ params }));
 
     expect(screen.getByLabelText(/url de destino/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/alias custom/i)).toBeInTheDocument();
@@ -22,8 +24,8 @@ describe("Encurtador", () => {
     ).toBeInTheDocument();
   });
 
-  it("exposes the analytics lookup", () => {
-    render(<Encurtador />);
+  it("exposes the analytics lookup", async () => {
+    render(await Encurtador({ params }));
 
     expect(
       screen.getByRole("button", { name: /ver métricas/i }),

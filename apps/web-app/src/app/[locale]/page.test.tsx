@@ -3,17 +3,19 @@ import { describe, expect, it } from "vitest";
 
 import Home from "./page";
 
-describe("Home", () => {
-  it("renders the hero heading", () => {
-    render(<Home />);
+const params = Promise.resolve({ locale: "pt-BR" });
 
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent(/code-cleaner/i);
+describe("Home", () => {
+  it("renders the hero heading", async () => {
+    render(await Home({ params }));
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /code-cleaner/i,
+    );
   });
 
-  it("renders the call-to-action links", () => {
-    render(<Home />);
+  it("renders the call-to-action links", async () => {
+    render(await Home({ params }));
 
     expect(
       screen.getByRole("link", { name: /ver projetos/i }),
