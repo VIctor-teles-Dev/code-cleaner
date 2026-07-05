@@ -21,6 +21,10 @@ coverage/
 
 # go
 apps/backend-api/tmp/
+apps/url-shortener/tmp/
+
+# geoip (base MaxMind GeoLite2: licença + tamanho — nunca versionar)
+*.mmdb
 
 # misc
 .DS_Store

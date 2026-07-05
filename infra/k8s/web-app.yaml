@@ -26,6 +26,14 @@ spec:
             # Destino do proxy same-origin /api/contact (service interno)
             - name: BACKEND_URL
               value: http://backend-api:8080
+            # Destino do proxy same-origin /api/encurtador/* (service interno)
+            - name: SHORTENER_URL
+              value: http://url-shortener:8080
+          # O proxy do encurtador injeta o admin token; mesmo SealedSecret do serviço.
+          envFrom:
+            - secretRef:
+                name: url-shortener-admin-token
+                optional: true
           readinessProbe:
             httpGet:
               path: /api/health

@@ -33,3 +33,14 @@ spec:
                 name: backend-api
                 port:
                   number: 8080
+    # Encurtador de URL: redirect (/{slug}) + API (/api/v1/...) no mesmo host.
+    - host: curto.ccl.app.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: url-shortener
+                port:
+                  number: 8080
