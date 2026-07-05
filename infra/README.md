@@ -174,3 +174,45 @@ página até ser publicado (por ora, via SQL: `UPDATE posts SET published_at
 - TLS: [cert-manager](https://cert-manager.io) com Let's Encrypt e a seção `tls` no Ingress.
 - Secrets: já usamos sealed-secrets; em produção, gere um novo `postgres-sealed-secret.yaml` com senha forte selada pela chave do cluster de produção (os valores selados no repo são de desenvolvimento).
 - Banco: avalie um Postgres gerenciado (RDS, Cloud SQL, Neon) em vez do StatefulSet.
+
+## CD: deploy automático na VPS (k3s + runner self-hosted)
+
+No merge para a `main`, o workflow `.github/workflows/deploy.yml` roda **depois** do CI
+passar. Ele executa num **runner self-hosted na própria VPS**, que puxa o repo, builda
+as imagens e aplica no cluster k3s via `infra/deploy.sh` (build → `k3s ctr images import`
+→ `k3s kubectl apply -k` → `rollout`). As **migrations rodam sozinhas** no boot de cada
+serviço Go, então o rollout já aplica o schema novo.
+
+### Setup da VPS (uma vez)
+
+```bash
+# 1. k3s (sem o Traefik, já que o Ingress usa ingressClassName: nginx)
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik" sh -
+
+# 2. ingress-nginx + sealed-secrets
+sudo k3s kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+sudo k3s kubectl apply -f https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.38.4/controller.yaml
+
+# 3. Docker (para buildar as imagens na VPS)
+curl -fsSL https://get.docker.com | sh
+
+# 4. Runner self-hosted do GitHub com a label `ccl-vps`
+#    (repo > Settings > Actions > Runners > New self-hosted runner)
+#    O usuário do runner precisa do grupo docker e de sudo SEM SENHA para o k3s:
+sudo usermod -aG docker "$USER"
+echo "$USER ALL=(ALL) NOPASSWD: $(command -v k3s)" | sudo tee /etc/sudoers.d/k3s-runner
+
+# 5. Secrets: SealedSecrets são POR CLUSTER — os do repo foram selados para o
+#    cluster local. Re-sele para a VPS (kubeseal contra a chave DESTE cluster) e
+#    substitua os *-sealed-secret.yaml; o smtp fica fora do git (imperativo):
+sudo k3s kubectl create namespace ccl
+sudo k3s kubectl -n ccl create secret generic smtp-credentials \
+  --from-literal=SMTP_HOST=smtp.gmail.com --from-literal=SMTP_PORT=587 \
+  --from-literal=SMTP_USERNAME=voce@gmail.com --from-literal=SMTP_PASSWORD=app-password \
+  --from-literal=CONTACT_FROM=voce@gmail.com --from-literal=CONTACT_TO=voce@gmail.com
+
+# 6. DNS: aponte os subdomínios (code-cleaner, api.code-cleaner, curto) para o IP da VPS.
+# 7. Primeiro deploy: rode `bash infra/deploy.sh` na VPS (ou faça um push na main).
+```
+
+TLS: adicione cert-manager + Let's Encrypt e a seção `tls` no Ingress para HTTPS.
