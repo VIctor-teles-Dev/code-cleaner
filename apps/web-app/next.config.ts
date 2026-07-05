@@ -1,0 +1,14 @@
+import path from "node:path";
+
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  output: "standalone",
+  outputFileTracingRoot: path.join(__dirname, "../.."),
+  transpilePackages: [
+    "@write-better-codes/ui-components",
+    "@write-better-codes/utils",
+  ],
+};
+
+export default nextConfig;

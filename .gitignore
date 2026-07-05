@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+out/
+dist/
+build/
+bin/
+
+# turborepo
+.turbo/
+
+# tests
+coverage/
+
+# env
+.env
+.env.*
+!.env.example
+
+# go
+apps/backend-api/tmp/
+
+# misc
+.DS_Store
+*.log
