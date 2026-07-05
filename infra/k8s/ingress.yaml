@@ -11,8 +11,19 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ccl
+  annotations:
+    # cert-manager emite/renova o cert automaticamente para os hosts em spec.tls.
+    # A emissão (HTTP-01) só completa depois que o DNS apontar p/ o cluster.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - ccl.app.br
+        - code-cleaner.ccl.app.br
+        - api.code-cleaner.ccl.app.br
+        - url-shortener.ccl.app.br
+      secretName: ccl-tls
   rules:
     - host: ccl.app.br
       http:

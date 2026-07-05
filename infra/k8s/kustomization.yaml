@@ -11,4 +11,5 @@ resources:
   - backend-api.yaml
   - web-app.yaml
   - url-shortener.yaml
+  - cert-issuer.yaml
   - ingress.yaml
