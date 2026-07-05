@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 
 import styles from "./page.module.css";
@@ -7,8 +8,8 @@ import styles from "./page.module.css";
 type Status = "idle" | "sending" | "success" | "error";
 
 export function ContactForm() {
+  const t = useTranslations("contact");
   const [status, setStatus] = useState<Status>("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,7 +17,6 @@ export function ContactForm() {
     const data = new FormData(form);
 
     setStatus("sending");
-    setErrorMessage(null);
 
     try {
       const response = await fetch("/api/contact", {
@@ -34,11 +34,6 @@ export function ContactForm() {
         form.reset();
         return;
       }
-
-      const body = await response.json().catch(() => null);
-      setErrorMessage(
-        body && typeof body.error === "string" ? body.error : null,
-      );
       setStatus("error");
     } catch {
       setStatus("error");
@@ -48,16 +43,14 @@ export function ContactForm() {
   if (status === "success") {
     return (
       <div className={styles.success} role="status">
-        <p className={styles.successTitle}>Mensagem enviada ✓</p>
-        <p className={styles.successText}>
-          Obrigado pelo contato! Respondo no email que você informou.
-        </p>
+        <p className={styles.successTitle}>{t("successTitle")}</p>
+        <p className={styles.successText}>{t("successText")}</p>
         <button
           type="button"
           className={styles.successReset}
           onClick={() => setStatus("idle")}
         >
-          Enviar outra mensagem
+          {t("sendAnother")}
         </button>
       </div>
     );
@@ -66,7 +59,7 @@ export function ContactForm() {
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.field}>
-        <label htmlFor="contact-name">Nome</label>
+        <label htmlFor="contact-name">{t("name")}</label>
         <input
           id="contact-name"
           name="name"
@@ -77,7 +70,7 @@ export function ContactForm() {
         />
       </div>
       <div className={styles.field}>
-        <label htmlFor="contact-email">Email</label>
+        <label htmlFor="contact-email">{t("email")}</label>
         <input
           id="contact-email"
           name="email"
@@ -87,7 +80,7 @@ export function ContactForm() {
         />
       </div>
       <div className={styles.field}>
-        <label htmlFor="contact-message">Mensagem</label>
+        <label htmlFor="contact-message">{t("message")}</label>
         <textarea
           id="contact-message"
           name="message"
@@ -103,18 +96,13 @@ export function ContactForm() {
           className={styles.submit}
           disabled={status === "sending"}
         >
-          {status === "sending" ? "Enviando…" : "Enviar mensagem"}
+          {status === "sending" ? t("sending") : t("submit")}
         </button>
-        <p className={styles.hint}>
-          Sua mensagem fica registrada e eu recebo uma notificação.
-        </p>
+        <p className={styles.hint}>{t("hint")}</p>
       </div>
 
       <p className={styles.error} role="alert" aria-live="polite">
-        {status === "error"
-          ? (errorMessage ??
-            "Não foi possível enviar agora. Tente de novo em instantes.")
-          : ""}
+        {status === "error" ? t("error") : ""}
       </p>
     </form>
   );

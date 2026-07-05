@@ -39,32 +39,37 @@ func TestMigrateCreatesBlogSchema(t *testing.T) {
 		t.Fatalf("second Migrate() error = %v", err)
 	}
 
-	var count int
-	err = pool.QueryRow(
-		`SELECT count(*) FROM information_schema.tables WHERE table_name = 'posts'`,
-	).Scan(&count)
-	if err != nil {
-		t.Fatalf("query error = %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("posts table count = %d, want 1", count)
+	// Schema multilíngue: posts + tabelas de tradução existem.
+	for _, table := range []string{"posts", "post_translations", "tags", "tag_translations"} {
+		var count int
+		if err := pool.QueryRow(
+			`SELECT count(*) FROM information_schema.tables WHERE table_name = $1`, table,
+		).Scan(&count); err != nil {
+			t.Fatalf("query %s error = %v", table, err)
+		}
+		if count != 1 {
+			t.Fatalf("%s table count = %d, want 1", table, count)
+		}
 	}
 
-	if _, err := pool.Exec(`DELETE FROM posts`); err != nil {
+	if _, err := pool.Exec(`TRUNCATE posts CASCADE`); err != nil {
 		t.Fatalf("cleanup error = %v", err)
 	}
-	_, err = pool.Exec(
-		`INSERT INTO posts (slug, title, content) VALUES ('hello-world', 'Hello World', 'primeiro post')`,
-	)
-	if err != nil {
-		t.Fatalf("insert error = %v", err)
+	var postID int64
+	if err := pool.QueryRow(
+		`INSERT INTO posts (slug) VALUES ('hello-world') RETURNING id`,
+	).Scan(&postID); err != nil {
+		t.Fatalf("insert post error = %v", err)
+	}
+	if _, err := pool.Exec(
+		`INSERT INTO post_translations (post_id, locale, title, content)
+		 VALUES ($1, 'pt-BR', 'Hello World', 'primeiro post')`, postID,
+	); err != nil {
+		t.Fatalf("insert translation error = %v", err)
 	}
 
 	// slug é único — segunda inserção com o mesmo slug deve falhar
-	_, err = pool.Exec(
-		`INSERT INTO posts (slug, title, content) VALUES ('hello-world', 'Outro título', 'outro corpo')`,
-	)
-	if err == nil {
+	if _, err := pool.Exec(`INSERT INTO posts (slug) VALUES ('hello-world')`); err == nil {
 		t.Error("insert with duplicate slug = nil error, want unique violation")
 	}
 }

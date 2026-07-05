@@ -12,13 +12,15 @@ import (
 )
 
 type fakePostStore struct {
-	posts   []blog.Post
-	err     error
-	created []blog.Post
-	lastTag string
+	posts      []blog.Post
+	err        error
+	created    []blog.PostInput
+	lastTag    string
+	lastLocale string
 }
 
-func (f *fakePostStore) ListPublished(_ context.Context, tagSlug string) ([]blog.Post, error) {
+func (f *fakePostStore) ListPublished(_ context.Context, locale, tagSlug string) ([]blog.Post, error) {
+	f.lastLocale = locale
 	f.lastTag = tagSlug
 	if f.err != nil {
 		return nil, f.err
@@ -38,7 +40,8 @@ func (f *fakePostStore) ListPublished(_ context.Context, tagSlug string) ([]blog
 	return filtered, nil
 }
 
-func (f *fakePostStore) GetPublishedBySlug(_ context.Context, slug string) (blog.Post, error) {
+func (f *fakePostStore) GetPublishedBySlug(_ context.Context, locale, slug string) (blog.Post, error) {
+	f.lastLocale = locale
 	if f.err != nil {
 		return blog.Post{}, f.err
 	}
@@ -50,12 +53,17 @@ func (f *fakePostStore) GetPublishedBySlug(_ context.Context, slug string) (blog
 	return blog.Post{}, blog.ErrNotFound
 }
 
-func (f *fakePostStore) Create(_ context.Context, post blog.Post) error {
+func (f *fakePostStore) Create(_ context.Context, post blog.PostInput) error {
 	if f.err != nil {
 		return f.err
 	}
 	for _, p := range f.posts {
 		if p.Slug == post.Slug {
+			return blog.ErrDuplicateSlug
+		}
+	}
+	for _, c := range f.created {
+		if c.Slug == post.Slug {
 			return blog.ErrDuplicateSlug
 		}
 	}
@@ -96,6 +104,24 @@ func TestListPostsReturnsSummaries(t *testing.T) {
 	}
 	if !strings.Contains(body, `"tags":[{"slug":"minhas-aplicacoes","name":"minhas aplicações"}]`) {
 		t.Errorf("body = %q, want the post tags", body)
+	}
+}
+
+func TestListPostsPassesLocale(t *testing.T) {
+	store := &fakePostStore{}
+	req := httptest.NewRequest(http.MethodGet, "/posts?locale=en", nil)
+	ListPosts(store)(httptest.NewRecorder(), req)
+	if store.lastLocale != "en" {
+		t.Errorf("store.lastLocale = %q, want en", store.lastLocale)
+	}
+}
+
+func TestListPostsDefaultsLocale(t *testing.T) {
+	store := &fakePostStore{}
+	req := httptest.NewRequest(http.MethodGet, "/posts?locale=zz", nil) // desconhecido
+	ListPosts(store)(httptest.NewRecorder(), req)
+	if store.lastLocale != blog.DefaultLocale {
+		t.Errorf("store.lastLocale = %q, want %q (fallback)", store.lastLocale, blog.DefaultLocale)
 	}
 }
 
@@ -163,7 +189,7 @@ func createPost(store blog.Store, token, auth, body string) *httptest.ResponseRe
 	return rec
 }
 
-const validPost = `{"slug":"novo-post","title":"Novo","content":"corpo","published":true}`
+const validPost = `{"slug":"novo-post","published":true,"translations":{"pt-BR":{"title":"Novo","content":"corpo"}}}`
 
 func TestCreatePostRequiresToken(t *testing.T) {
 	store := &fakePostStore{}
@@ -212,10 +238,25 @@ func TestCreatePostDraftHasNoPublishedAt(t *testing.T) {
 	store := &fakePostStore{}
 
 	createPost(store, "segredo", "Bearer segredo",
-		`{"slug":"rascunho","title":"Rascunho","content":"wip","published":false}`)
+		`{"slug":"rascunho","published":false,"translations":{"pt-BR":{"title":"Rascunho","content":"wip"}}}`)
 
 	if len(store.created) != 1 || store.created[0].PublishedAt != nil {
 		t.Errorf("created = %+v, want one draft without PublishedAt", store.created)
+	}
+}
+
+func TestCreatePostStoresTranslations(t *testing.T) {
+	store := &fakePostStore{}
+
+	createPost(store, "segredo", "Bearer segredo",
+		`{"slug":"bi","translations":{"pt-BR":{"title":"Olá","content":"c"},"en":{"title":"Hi","content":"c"}}}`)
+
+	if len(store.created) != 1 {
+		t.Fatalf("created = %d, want 1", len(store.created))
+	}
+	tr := store.created[0].Translations
+	if tr["pt-BR"].Title != "Olá" || tr["en"].Title != "Hi" {
+		t.Errorf("translations = %+v, want pt-BR e en", tr)
 	}
 }
 
@@ -224,9 +265,11 @@ func TestCreatePostValidation(t *testing.T) {
 		label string
 		body  string
 	}{
-		{"bad slug", `{"slug":"Com Espaço","title":"T","content":"c"}`},
-		{"missing title", `{"slug":"ok","content":"c"}`},
-		{"missing content", `{"slug":"ok","title":"T"}`},
+		{"bad slug", `{"slug":"Com Espaço","translations":{"pt-BR":{"title":"T","content":"c"}}}`},
+		{"missing default title", `{"slug":"ok","translations":{"pt-BR":{"content":"c"}}}`},
+		{"missing default content", `{"slug":"ok","translations":{"pt-BR":{"title":"T"}}}`},
+		{"missing default locale", `{"slug":"ok","translations":{"en":{"title":"T","content":"c"}}}`},
+		{"unknown locale", `{"slug":"ok","translations":{"pt-BR":{"title":"T","content":"c"},"zz":{"title":"x","content":"y"}}}`},
 		{"malformed json", `{`},
 	}
 	for _, tc := range cases {
@@ -243,17 +286,19 @@ func TestCreatePostWithTags(t *testing.T) {
 	store := &fakePostStore{}
 
 	rec := createPost(store, "segredo", "Bearer segredo",
-		`{"slug":"com-tags","title":"T","content":"c","tags":["minhas aplicações","Go"]}`)
+		`{"slug":"com-tags","translations":{"pt-BR":{"title":"T","content":"c"}},`+
+			`"tags":[{"slug":"arquitetura","names":{"pt-BR":"Arquitetura","en":"Architecture"}},`+
+			`{"slug":"go","names":{"pt-BR":"Go","en":"Go"}}]}`)
 
 	if rec.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
+		t.Fatalf("status = %d, want %d (body=%s)", rec.Code, http.StatusCreated, rec.Body.String())
 	}
 	if len(store.created) != 1 || len(store.created[0].Tags) != 2 {
 		t.Fatalf("created = %+v, want one post with 2 tags", store.created)
 	}
 	got := store.created[0].Tags[0]
-	if got.Slug != "minhas-aplicacoes" || got.Name != "minhas aplicações" {
-		t.Errorf("tag = %+v, want slugified slug and original name", got)
+	if got.Slug != "arquitetura" || got.Names["pt-BR"] != "Arquitetura" || got.Names["en"] != "Architecture" {
+		t.Errorf("tag = %+v, want slug + nomes por idioma", got)
 	}
 }
 
@@ -262,8 +307,8 @@ func TestCreatePostRejectsInvalidTags(t *testing.T) {
 		label string
 		body  string
 	}{
-		{"blank tag", `{"slug":"ok","title":"T","content":"c","tags":["  "]}`},
-		{"symbol-only tag", `{"slug":"ok","title":"T","content":"c","tags":["!!!"]}`},
+		{"bad tag slug", `{"slug":"ok","translations":{"pt-BR":{"title":"T","content":"c"}},"tags":[{"slug":"Com Espaço","names":{"pt-BR":"x"}}]}`},
+		{"blank tag name", `{"slug":"ok","translations":{"pt-BR":{"title":"T","content":"c"}},"tags":[{"slug":"go","names":{"pt-BR":"  "}}]}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.label, func(t *testing.T) {
@@ -279,7 +324,7 @@ func TestCreatePostDuplicateSlug(t *testing.T) {
 	store := &fakePostStore{posts: []blog.Post{publishedPost()}}
 
 	rec := createPost(store, "segredo", "Bearer segredo",
-		`{"slug":"primeiro-post","title":"Duplicado","content":"c"}`)
+		`{"slug":"primeiro-post","translations":{"pt-BR":{"title":"Duplicado","content":"c"}}}`)
 
 	if rec.Code != http.StatusConflict {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusConflict)

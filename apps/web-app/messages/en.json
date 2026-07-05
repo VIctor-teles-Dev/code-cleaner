@@ -1,0 +1,139 @@
+{
+  "metadata": {
+    "defaultTitle": "code-cleaner",
+    "titleTemplate": "%s · code-cleaner",
+    "description": "Turning coffee into clean code, scalable architecture and apps that solve real problems."
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "apps": "Apps",
+    "blog": "Blog",
+    "contact": "Contact",
+    "ariaLabel": "Main navigation",
+    "brandAriaLabel": "code-cleaner — home"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Language",
+    "pt-BR": "PT",
+    "en": "EN"
+  },
+  "home": {
+    "badge": "Available for new projects",
+    "eyebrow": "Hello, world! I'm the developer behind",
+    "subtitle": "Turning coffee into clean code, scalable architecture and apps that solve real problems.",
+    "ctaProjects": "See projects",
+    "ctaBlog": "Read the blog",
+    "stackAriaLabel": "Core technologies"
+  },
+  "about": {
+    "title": "About",
+    "description": "Who's behind code-cleaner: goals, stack and how I work.",
+    "eyebrow": "$ whoami",
+    "heading": "About me",
+    "photoAlt": "Photo of Victor Teles",
+    "bio1": "Hi! I'm Victor, a full stack developer who loves turning complex problems into simple solutions. I work from the database to the interface — Go on the backend, React and Next.js on the frontend — always guided by tests and code the next person can read.",
+    "bio2": "My goal is to build apps that solve real problems, with scalable architecture and predictable deploys. This site is my lab: every feature starts with TDD, goes through CI and runs on Kubernetes — and what I learn along the way becomes a blog post.",
+    "techHeading": "Technologies I work with",
+    "roles": {
+      "go": "Backend APIs and services",
+      "typescript": "Strong typing from front to back",
+      "react": "Modern interfaces with SSR",
+      "postgresql": "Data modeling and persistence",
+      "docker": "Reproducible environments",
+      "kubernetes": "Orchestration and resilient deploys",
+      "monorepo": "Monorepos with fast DX",
+      "ci": "CI/CD on every pull request"
+    }
+  },
+  "blog": {
+    "title": "Blog",
+    "description": "Articles about clean code, architecture and what I learn building real apps.",
+    "eyebrow": "$ ls blog/",
+    "eyebrowFiltered": "$ ls blog/ | grep \"{tag}\"",
+    "heading": "Blog",
+    "subtitle": "What I learn by building — clean code, architecture and the decisions behind this site.",
+    "filteringBy": "Filtering by ",
+    "clearFilter": "clear filter ×",
+    "emptyTag": "// no posts with this tag",
+    "emptyAll": "// no posts published yet — check back soon",
+    "tagsAriaLabel": "Tags",
+    "notFound": "Post not found",
+    "back": "← Back to the blog"
+  },
+  "apps": {
+    "title": "Apps",
+    "description": "The monorepo's apps, each on its own subdomain of ccl.app.br.",
+    "eyebrow": "$ ls apps/",
+    "heading": "Apps",
+    "subtitlePrefix": "The apps in this monorepo, each served on its own subdomain of ",
+    "subtitleSuffix": " by the same Kubernetes cluster.",
+    "stackAriaLabel": "Stack",
+    "screenshotAlt": "Screenshot of the {name} app",
+    "status": {
+      "online": "online",
+      "building": "under construction",
+      "soon": "soon"
+    },
+    "items": {
+      "code-cleaner": "This site: portfolio and blog with its own Go API, Markdown posts in PostgreSQL and a persistence-first contact form.",
+      "url-shortener": "URL shortener with low-latency redirects (in-memory cache), async click analytics and custom aliases. Go API on the same cluster; short links at curto.ccl.app.br.",
+      "mobile-app": "Upcoming mobile app for the ecosystem, sharing the monorepo's UI and utility packages.",
+      "docs": "Upcoming technical documentation hub — architecture, decisions and contribution guides."
+    }
+  },
+  "contact": {
+    "title": "Contact",
+    "description": "Get in touch: send your message and I'll reply by email.",
+    "eyebrow": "$ mail victor",
+    "heading": "Contact",
+    "subtitle": "Got a project in mind, a role, or just want to talk about code? Send me a message — I read them all and reply by email.",
+    "name": "Name",
+    "email": "Email",
+    "message": "Message",
+    "sending": "Sending…",
+    "submit": "Send message",
+    "hint": "Your message is saved and I get a notification.",
+    "error": "Couldn't send right now. Please try again in a moment.",
+    "successTitle": "Message sent ✓",
+    "successText": "Thanks for reaching out! I'll reply to the email you provided.",
+    "sendAnother": "Send another message"
+  },
+  "shortener": {
+    "title": "URL Shortener",
+    "description": "URL shortener with low-latency redirects and click analytics — a Go API running on the same Kubernetes cluster.",
+    "eyebrow": "$ curl -X POST /api/v1/urls",
+    "heading": "URL Shortener",
+    "subtitle": "Paste a long URL and get a short link. Redirects are served by a Go API (in-memory cache for hot links) and every click feeds the metrics dashboard asynchronously, without slowing the redirect down.",
+    "urlLabel": "Destination URL",
+    "urlPlaceholder": "https://example.com/some/very/long/page",
+    "aliasLabel": "Custom alias (optional)",
+    "aliasPlaceholder": "my-brand",
+    "expiresLabel": "Expires at (optional)",
+    "shortening": "Shortening…",
+    "submit": "Shorten",
+    "hint": "7-char base62 slug, or your alias.",
+    "createError": "Couldn't shorten right now.",
+    "resultLabel": "Short link",
+    "copied": "copied ✓",
+    "copy": "copy",
+    "metricsAriaLabel": "Click metrics",
+    "metricsHeading": "Metrics",
+    "slugPlaceholder": "link code (e.g. aB3x9)",
+    "slugAriaLabel": "Link code",
+    "viewMetrics": "View metrics",
+    "loading": "Loading…",
+    "notFound": "No link with that code.",
+    "metricsError": "Couldn't load the metrics.",
+    "panelDay": "Clicks per day",
+    "panelCountries": "Countries",
+    "panelBrowsers": "Browsers",
+    "panelDevices": "Devices",
+    "panelReferrers": "Referrers",
+    "emptyClicks": "No clicks yet.",
+    "emptyCountries": "No country data.",
+    "emptyData": "No data.",
+    "emptyReferrers": "Direct visits.",
+    "clicksLabel": "{count, plural, one {click on} other {clicks on}}"
+  }
+}

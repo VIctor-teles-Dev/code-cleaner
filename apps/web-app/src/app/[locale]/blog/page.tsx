@@ -1,57 +1,60 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { Link } from "@/i18n/navigation";
 import { formatDate, getPosts } from "@/lib/blog";
 
 import styles from "./page.module.css";
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description:
-    "Artigos sobre código limpo, arquitetura e o que aprendo construindo aplicações reais.",
-};
-
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "blog" });
+  return { title: t("title"), description: t("description") };
+}
+
 interface BlogProps {
+  params: Promise<{ locale: string }>;
   searchParams?: Promise<{ tag?: string }>;
 }
 
-export default async function Blog({ searchParams }: BlogProps) {
+export default async function Blog({ params, searchParams }: BlogProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("blog");
+
   const { tag } = (await searchParams) ?? {};
-  const posts = await getPosts(tag);
+  const posts = await getPosts(locale, tag);
   const activeTag = tag
-    ? posts.flatMap((p) => p.tags).find((t) => t.slug === tag)
+    ? posts.flatMap((p) => p.tags).find((tg) => tg.slug === tag)
     : undefined;
 
   return (
     <main className={styles.page}>
       <div className={styles.container}>
         <p className={styles.eyebrow}>
-          {tag ? `$ ls blog/ | grep "${tag}"` : "$ ls blog/"}
+          {tag ? t("eyebrowFiltered", { tag }) : t("eyebrow")}
         </p>
-        <h1 className={styles.title}>Blog</h1>
-        <p className={styles.subtitle}>
-          O que eu aprendo construindo — código limpo, arquitetura e as
-          decisões por trás deste site.
-        </p>
+        <h1 className={styles.title}>{t("heading")}</h1>
+        <p className={styles.subtitle}>{t("subtitle")}</p>
 
         {tag && (
           <p className={styles.filter}>
-            Filtrando por{" "}
+            {t("filteringBy")}
             <span className={styles.filterTag}>{activeTag?.name ?? tag}</span>
             <Link href="/blog" className={styles.filterClear}>
-              limpar filtro ×
+              {t("clearFilter")}
             </Link>
           </p>
         )}
 
         {posts.length === 0 ? (
-          <p className={styles.empty}>
-            {tag
-              ? "// nenhum post com essa tag"
-              : "// nenhum post publicado ainda — volte em breve"}
-          </p>
+          <p className={styles.empty}>{tag ? t("emptyTag") : t("emptyAll")}</p>
         ) : (
           <ul className={styles.list}>
             {posts.map((post) => (
@@ -60,7 +63,7 @@ export default async function Blog({ searchParams }: BlogProps) {
                   className={styles.date}
                   dateTime={post.published_at ?? undefined}
                 >
-                  {formatDate(post.published_at)}
+                  {formatDate(post.published_at, locale)}
                 </time>
                 <h2 className={styles.postTitle}>
                   <Link
@@ -72,14 +75,14 @@ export default async function Blog({ searchParams }: BlogProps) {
                 </h2>
                 <p className={styles.excerpt}>{post.excerpt}</p>
                 {post.tags.length > 0 && (
-                  <ul className={styles.tags} aria-label="Tags">
-                    {post.tags.map((t) => (
-                      <li key={t.slug}>
+                  <ul className={styles.tags} aria-label={t("tagsAriaLabel")}>
+                    {post.tags.map((tg) => (
+                      <li key={tg.slug}>
                         <Link
-                          href={`/blog?tag=${encodeURIComponent(t.slug)}`}
+                          href={`/blog?tag=${encodeURIComponent(tg.slug)}`}
                           className={styles.tag}
                         >
-                          #{t.name}
+                          #{tg.name}
                         </Link>
                       </li>
                     ))}

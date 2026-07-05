@@ -3,21 +3,20 @@ import { describe, expect, it } from "vitest";
 
 import Sobre from "./page";
 
-describe("Sobre", () => {
-  it("renders the page heading and bio", () => {
-    render(<Sobre />);
+const params = Promise.resolve({ locale: "pt-BR" });
 
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent(/sobre mim/i);
+describe("Sobre", () => {
+  it("renders the page heading and bio", async () => {
+    render(await Sobre({ params }));
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /sobre mim/i,
+    );
     expect(screen.getByText(/problemas reais/i)).toBeInTheDocument();
   });
 
-  it("renders the technology cards", () => {
-    render(<Sobre />);
-
-    const list = screen.getByRole("list");
-    expect(list).toBeInTheDocument();
+  it("renders the technology cards", async () => {
+    render(await Sobre({ params }));
 
     for (const tech of ["Go", "TypeScript", "PostgreSQL", "Kubernetes"]) {
       expect(screen.getByText(tech)).toBeInTheDocument();

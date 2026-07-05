@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import PostPage from "./page";
 
-const params = Promise.resolve({ slug: "primeiro-post" });
+const params = Promise.resolve({ locale: "pt-BR", slug: "primeiro-post" });
 
 afterEach(() => {
   vi.unstubAllGlobals();

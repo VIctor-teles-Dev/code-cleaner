@@ -10,11 +10,16 @@ import (
 	"time"
 )
 
+// DefaultLocale é o idioma de fallback quando uma tradução não existe.
+const DefaultLocale = "pt-BR"
+
+// Tag é uma tag já resolvida para um idioma (Name no locale pedido).
 type Tag struct {
 	Slug string
 	Name string
 }
 
+// Post é um post já resolvido para um idioma (Title/Content no locale pedido).
 type Post struct {
 	Slug        string
 	Title       string
@@ -23,21 +28,42 @@ type Post struct {
 	Tags        []Tag
 }
 
+// Translation é o título/conteúdo de um post num idioma.
+type Translation struct {
+	Title   string
+	Content string
+}
+
+// TagInput é uma tag na criação: slug estável + nome por idioma.
+type TagInput struct {
+	Slug  string
+	Names map[string]string // locale -> nome
+}
+
+// PostInput é o payload de criação de um post multilíngue.
+type PostInput struct {
+	Slug         string
+	PublishedAt  *time.Time
+	Translations map[string]Translation // locale -> {title, content}
+	Tags         []TagInput
+}
+
 var (
 	ErrNotFound      = errors.New("post not found")
 	ErrDuplicateSlug = errors.New("slug already exists")
 )
 
 type Store interface {
-	// ListPublished retorna os posts publicados, do mais recente ao mais
-	// antigo. tagSlug vazio lista todos; preenchido, filtra pela tag.
-	ListPublished(ctx context.Context, tagSlug string) ([]Post, error)
-	// GetPublishedBySlug retorna ErrNotFound quando o post não existe
-	// ou ainda não foi publicado.
-	GetPublishedBySlug(ctx context.Context, slug string) (Post, error)
-	// Create persiste o post e faz upsert das tags pelo slug.
-	// Retorna ErrDuplicateSlug quando o slug do post já está em uso.
-	Create(ctx context.Context, post Post) error
+	// ListPublished retorna os posts publicados no locale pedido (com fallback
+	// para DefaultLocale), do mais recente ao mais antigo. tagSlug vazio lista
+	// todos; preenchido, filtra pela tag.
+	ListPublished(ctx context.Context, locale, tagSlug string) ([]Post, error)
+	// GetPublishedBySlug retorna o post no locale pedido (com fallback);
+	// ErrNotFound quando o post não existe ou ainda não foi publicado.
+	GetPublishedBySlug(ctx context.Context, locale, slug string) (Post, error)
+	// Create persiste o post com suas traduções e faz upsert das tags (por
+	// slug + nome por idioma). Retorna ErrDuplicateSlug se o slug já existe.
+	Create(ctx context.Context, post PostInput) error
 }
 
 var (

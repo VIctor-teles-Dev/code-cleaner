@@ -14,6 +14,17 @@ import (
 	"github.com/VIctor-teles-Dev/code-cleaner/apps/backend-api/internal/blog"
 )
 
+// knownLocales são os idiomas aceitos (espelha os locales do frontend).
+var knownLocales = map[string]bool{"pt-BR": true, "en": true}
+
+// resolveLocale lê ?locale=; cai para o default quando ausente/desconhecido.
+func resolveLocale(r *http.Request) string {
+	if loc := r.URL.Query().Get("locale"); knownLocales[loc] {
+		return loc
+	}
+	return blog.DefaultLocale
+}
+
 type tagJSON struct {
 	Slug string `json:"slug"`
 	Name string `json:"name"`
@@ -73,7 +84,7 @@ type apiError struct {
 	Error  string `json:"error,omitempty"`
 }
 
-// ListPosts responde GET /posts com os posts publicados.
+// ListPosts responde GET /posts com os posts publicados no locale pedido.
 func ListPosts(store blog.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if store == nil {
@@ -81,7 +92,7 @@ func ListPosts(store blog.Store) http.HandlerFunc {
 			return
 		}
 
-		posts, err := store.ListPublished(r.Context(), r.URL.Query().Get("tag"))
+		posts, err := store.ListPublished(r.Context(), resolveLocale(r), r.URL.Query().Get("tag"))
 		if err != nil {
 			log.Printf("posts: list failed: %v", err)
 			writeJSON(w, http.StatusInternalServerError, apiError{Status: "error"})
@@ -102,7 +113,7 @@ func ListPosts(store blog.Store) http.HandlerFunc {
 	}
 }
 
-// GetPost responde GET /posts/{slug} com o post completo.
+// GetPost responde GET /posts/{slug} com o post completo no locale pedido.
 func GetPost(store blog.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if store == nil {
@@ -110,7 +121,7 @@ func GetPost(store blog.Store) http.HandlerFunc {
 			return
 		}
 
-		post, err := store.GetPublishedBySlug(r.Context(), r.PathValue("slug"))
+		post, err := store.GetPublishedBySlug(r.Context(), resolveLocale(r), r.PathValue("slug"))
 		if errors.Is(err, blog.ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, apiError{Status: "not_found"})
 			return
@@ -133,12 +144,21 @@ func GetPost(store blog.Store) http.HandlerFunc {
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
+type translationJSON struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type tagInputJSON struct {
+	Slug  string            `json:"slug"`
+	Names map[string]string `json:"names"`
+}
+
 type createPostRequest struct {
-	Slug      string   `json:"slug"`
-	Title     string   `json:"title"`
-	Content   string   `json:"content"`
-	Published bool     `json:"published"`
-	Tags      []string `json:"tags"`
+	Slug         string                     `json:"slug"`
+	Published    bool                       `json:"published"`
+	Translations map[string]translationJSON `json:"translations"`
+	Tags         []tagInputJSON             `json:"tags"`
 }
 
 const (
@@ -147,28 +167,40 @@ const (
 )
 
 func validatePost(req createPostRequest) string {
-	switch {
-	case !slugPattern.MatchString(req.Slug):
+	if !slugPattern.MatchString(req.Slug) {
 		return "slug inválido (use letras minúsculas, números e hífens)"
-	case strings.TrimSpace(req.Title) == "":
-		return "informe o título"
-	case strings.TrimSpace(req.Content) == "":
-		return "informe o conteúdo"
-	case len(req.Tags) > maxTags:
+	}
+	def, ok := req.Translations[blog.DefaultLocale]
+	if !ok || strings.TrimSpace(def.Title) == "" {
+		return "informe o título no idioma padrão (" + blog.DefaultLocale + ")"
+	}
+	if strings.TrimSpace(def.Content) == "" {
+		return "informe o conteúdo no idioma padrão (" + blog.DefaultLocale + ")"
+	}
+	for loc := range req.Translations {
+		if !knownLocales[loc] {
+			return "idioma desconhecido: " + loc
+		}
+	}
+	if len(req.Tags) > maxTags {
 		return "muitas tags (máximo 10)"
 	}
 	for _, tag := range req.Tags {
-		trimmed := strings.TrimSpace(tag)
-		if trimmed == "" || utf8.RuneCountInString(trimmed) > maxTagRunes ||
-			blog.Slugify(trimmed) == "" {
+		if !slugPattern.MatchString(tag.Slug) {
 			return "tag inválida"
+		}
+		for loc, name := range tag.Names {
+			if !knownLocales[loc] || strings.TrimSpace(name) == "" ||
+				utf8.RuneCountInString(name) > maxTagRunes {
+				return "tag inválida"
+			}
 		}
 	}
 	return ""
 }
 
-// CreatePost responde POST /posts, protegido por bearer token. Token vazio
-// desabilita o endpoint (503) — escrita só é possível quando configurada.
+// CreatePost responde POST /posts, protegido por bearer token. Aceita as
+// traduções por idioma; a tradução do idioma padrão é obrigatória.
 func CreatePost(store blog.Store, token string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if store == nil || token == "" {
@@ -194,21 +226,26 @@ func CreatePost(store blog.Store, token string) http.HandlerFunc {
 			return
 		}
 
-		post := blog.Post{
-			Slug:    req.Slug,
-			Title:   strings.TrimSpace(req.Title),
-			Content: req.Content,
-		}
+		input := blog.PostInput{Slug: req.Slug, Translations: map[string]blog.Translation{}}
 		if req.Published {
 			now := time.Now().UTC()
-			post.PublishedAt = &now
+			input.PublishedAt = &now
+		}
+		for loc, tr := range req.Translations {
+			input.Translations[loc] = blog.Translation{
+				Title:   strings.TrimSpace(tr.Title),
+				Content: tr.Content,
+			}
 		}
 		for _, tag := range req.Tags {
-			name := strings.TrimSpace(tag)
-			post.Tags = append(post.Tags, blog.Tag{Slug: blog.Slugify(name), Name: name})
+			names := make(map[string]string, len(tag.Names))
+			for loc, name := range tag.Names {
+				names[loc] = strings.TrimSpace(name)
+			}
+			input.Tags = append(input.Tags, blog.TagInput{Slug: tag.Slug, Names: names})
 		}
 
-		err := store.Create(r.Context(), post)
+		err := store.Create(r.Context(), input)
 		if errors.Is(err, blog.ErrDuplicateSlug) {
 			writeJSON(w, http.StatusConflict,
 				apiError{Status: "conflict", Error: "já existe um post com esse slug"})
@@ -220,12 +257,17 @@ func CreatePost(store blog.Store, token string) http.HandlerFunc {
 			return
 		}
 
+		def := input.Translations[blog.DefaultLocale]
+		respTags := make([]tagJSON, 0, len(input.Tags))
+		for _, tag := range input.Tags {
+			respTags = append(respTags, tagJSON{Slug: tag.Slug, Name: tag.Names[blog.DefaultLocale]})
+		}
 		writeJSON(w, http.StatusCreated, postDetail{
-			Slug:        post.Slug,
-			Title:       post.Title,
-			Content:     post.Content,
-			PublishedAt: post.PublishedAt,
-			Tags:        toTagJSON(post.Tags),
+			Slug:        input.Slug,
+			Title:       def.Title,
+			Content:     def.Content,
+			PublishedAt: input.PublishedAt,
+			Tags:        respTags,
 		})
 	}
 }
