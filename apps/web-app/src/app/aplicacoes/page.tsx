@@ -19,23 +19,11 @@ interface AppEntry {
 // Ingress (infra/k8s/ingress.yaml). Sem url = ainda não publicado.
 const APPS: AppEntry[] = [
   {
-    name: "code-cleaner",
+    name: "url-shortener",
     description:
-      "Este site: portfólio e blog com API própria em Go, posts em Markdown no PostgreSQL e formulário de contato com persistência primeiro.",
-    stack: ["Next.js", "Go", "PostgreSQL", "Kubernetes"],
-    url: "http://code-cleaner.ccl.app.br",
-  },
-  {
-    name: "mobile-app",
-    description:
-      "Futuro app mobile do ecossistema, compartilhando os pacotes de UI e utilitários do monorepo.",
-    stack: ["React Native", "Expo", "TypeScript"],
-  },
-  {
-    name: "docs",
-    description:
-      "Futura central de documentação técnica dos projetos — arquitetura, decisões e guias de contribuição.",
-    stack: ["Next.js", "MDX"],
+      "Encurtador de URLs com redirecionamento, analytics de cliques e API autenticada para criar links. Go + PostgreSQL com migrations próprias.",
+    stack: ["Go", "PostgreSQL", "Kubernetes"],
+    url: "https://url-shortener.ccl.app.br",
   },
 ];
 
@@ -83,7 +71,7 @@ export default function Aplicacoes() {
                   <a href={app.url} className={styles.card}>
                     {body}
                     <span className={styles.open} aria-hidden="true">
-                      {app.url?.replace("http://", "")} ↗
+                      {app.url?.replace(/^https?:\/\//, "")} ↗
                     </span>
                   </a>
                 ) : (
