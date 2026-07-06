@@ -12,12 +12,12 @@ describe("Aplicacoes", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows only the url-shortener app, linked to its subdomain", () => {
+  it("shows only the url-shortener app, linked to the encurtador UI", () => {
     render(<Aplicacoes />);
 
     expect(
       screen.getByRole("link", { name: /url-shortener/i }),
-    ).toHaveAttribute("href", "https://url-shortener.ccl.app.br");
+    ).toHaveAttribute("href", "/encurtador");
 
     // demais cards foram removidos
     expect(screen.queryByText("code-cleaner")).not.toBeInTheDocument();
