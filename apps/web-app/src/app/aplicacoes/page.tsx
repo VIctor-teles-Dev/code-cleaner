@@ -21,9 +21,9 @@ const APPS: AppEntry[] = [
   {
     name: "url-shortener",
     description:
-      "Encurtador de URLs com redirecionamento, analytics de cliques e API autenticada para criar links. Go + PostgreSQL com migrations próprias.",
+      "Encurtador de URLs com redirecionamento de baixa latência e analytics de clique. Backend em Go + PostgreSQL; a UI (criar link + painel de métricas) roda aqui no site.",
     stack: ["Go", "PostgreSQL", "Kubernetes"],
-    url: "https://url-shortener.ccl.app.br",
+    url: "/encurtador",
   },
 ];
 

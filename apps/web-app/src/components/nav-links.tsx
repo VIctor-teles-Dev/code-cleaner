@@ -3,24 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { NAV_ITEMS, isNavItemActive } from "./nav-items";
 import styles from "./site-header.module.css";
-
-const LINKS = [
-  { href: "/", label: "Início" },
-  { href: "/sobre", label: "Sobre" },
-  { href: "/aplicacoes", label: "Aplicações" },
-  { href: "/blog", label: "Blog" },
-  { href: "/contato", label: "Contato" },
-] as const;
 
 export function NavLinks() {
   const pathname = usePathname();
 
   return (
     <nav className={styles.nav} aria-label="Navegação principal">
-      {LINKS.map(({ href, label }) => {
-        const isActive =
-          href === "/" ? pathname === "/" : pathname?.startsWith(href);
+      {NAV_ITEMS.map(({ href, label }) => {
+        const isActive = isNavItemActive(href, pathname);
 
         return (
           <Link
