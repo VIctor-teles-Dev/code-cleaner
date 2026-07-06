@@ -178,10 +178,22 @@ página até ser publicado (por ora, via SQL: `UPDATE posts SET published_at
 ## CD: deploy automático na VPS (k3s + runner self-hosted)
 
 No merge para a `main`, o workflow `.github/workflows/deploy.yml` roda **depois** do CI
-passar. Ele executa num **runner self-hosted na própria VPS**, que puxa o repo, builda
-as imagens e aplica no cluster k3s via `infra/deploy.sh` (build → `k3s ctr images import`
-→ `k3s kubectl apply -k` → `rollout`). As **migrations rodam sozinhas** no boot de cada
-serviço Go, então o rollout já aplica o schema novo.
+passar, em dois jobs:
+
+- **`build`** (runner do GitHub `ubuntu-latest`): builda as 3 imagens e publica no
+  **GHCR** (`ghcr.io/<owner>/ccl-*:<sha>`). O build fica FORA da VPS de propósito —
+  buildar o Next.js numa VPS de 1.9 GB estourava a RAM (OOM) e derrubava o cluster.
+- **`deploy`** (runner self-hosted na VPS): só **baixa** as imagens do GHCR, importa no
+  containerd do k3s (`docker pull` → re-tag `ccl/<app>:dev` → `k3s ctr images import`),
+  aplica os manifests (`k3s kubectl apply -k`) e faz `rollout`. O `deploy` autentica no
+  GHCR com o `GITHUB_TOKEN` do próprio job (não precisa de secret no cluster).
+
+As **migrations rodam sozinhas** no boot de cada serviço Go, então o rollout já aplica o
+schema novo.
+
+> A VPS de 1.9 GB roda com **1 réplica** por app (ver `replicas` nos manifests) e com
+> **swap** (`/swapfile`, 4 GB) pra ter folga. Se migrar para um host maior, dá pra subir
+> as réplicas de volta.
 
 ### Setup da VPS (uma vez)
 
@@ -193,7 +205,7 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik" sh -
 sudo k3s kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
 sudo k3s kubectl apply -f https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.38.4/controller.yaml
 
-# 3. Docker (para buildar as imagens na VPS)
+# 3. Docker (para baixar as imagens do GHCR e importar no k3s — o build é no CI)
 curl -fsSL https://get.docker.com | sh
 
 # 4. Runner self-hosted do GitHub com a label `ccl-vps`
@@ -212,7 +224,10 @@ sudo k3s kubectl -n ccl create secret generic smtp-credentials \
   --from-literal=CONTACT_FROM=voce@gmail.com --from-literal=CONTACT_TO=voce@gmail.com
 
 # 6. DNS: aponte os subdomínios (code-cleaner, api.code-cleaner, curto) para o IP da VPS.
-# 7. Primeiro deploy: rode `bash infra/deploy.sh` na VPS (ou faça um push na main).
+# 7. Swap (VPS pequena): fallocate -l 4G /swapfile && chmod 600 /swapfile &&
+#    mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab
+# 8. Primeiro deploy: faça um push na main (o CD builda no GHCR e a VPS baixa).
+#    Para rodar à mão: exporte SHA/OWNER/GHCR_USER/GHCR_TOKEN e chame bash infra/deploy.sh.
 ```
 
 TLS: adicione cert-manager + Let's Encrypt e a seção `tls` no Ingress para HTTPS.
