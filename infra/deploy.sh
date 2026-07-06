@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Deploy no cluster k3s da VPS. As imagens já vêm BUILDADAS do GHCR (job "build"
-# do .github/workflows/deploy.yml roda num runner do GitHub) — aqui só baixamos e
-# importamos no k3s. Buildar na VPS (1.9 GB) estourava a RAM (OOM), por isso o
+# do .github/workflows/deploy.yml roda num runner do GitHub) — aqui o containerd
+# do k3s só as BAIXA. Buildar na VPS (1.9 GB) estourava a RAM (OOM), por isso o
 # build saiu daqui. Idempotente — pode rodar quantas vezes for preciso.
 #
-# Requisitos na VPS: docker, k3s, sudo sem senha p/ o k3s, e as variáveis
+# Requisitos na VPS: k3s, sudo sem senha p/ o k3s, e as variáveis
 # SHA / OWNER / GHCR_USER / GHCR_TOKEN (injetadas pelo workflow de Deploy).
 set -euo pipefail
 
@@ -13,15 +13,15 @@ cd "$(dirname "$0")/.."
 : "${SHA:?SHA não definido (é injetado pelo workflow)}"
 reg="ghcr.io/$(echo "${OWNER:-victor-teles-dev}" | tr '[:upper:]' '[:lower:]')"
 
-echo ">> login no GHCR"
-echo "${GHCR_TOKEN:?}" | docker login ghcr.io -u "${GHCR_USER:?}" --password-stdin
-
-echo ">> pull das imagens do GHCR + import no containerd do k3s"
+echo ">> pull das imagens do GHCR direto no containerd do k3s"
+# O containerd do k3s puxa do registro (caminho nativo do k8s): resolve só o
+# manifesto linux/amd64 e ignora as attestations do buildkit. É diferente de
+# `docker save | ctr import`, que quebrava com "content digest not found".
 for img in backend-api url-shortener web-app; do
-  docker pull "$reg/ccl-${img}:$SHA"
-  # Re-tag para o nome local que os manifests usam (ccl/<app>:dev, IfNotPresent).
-  docker tag "$reg/ccl-${img}:$SHA" "ccl/${img}:dev"
-  docker save "ccl/${img}:dev" | sudo k3s ctr images import -
+  src="$reg/ccl-${img}:$SHA"
+  sudo k3s ctr images pull --platform linux/amd64 --user "${GHCR_USER:?}:${GHCR_TOKEN:?}" "$src"
+  # Re-tag p/ o nome local que os manifests usam (ccl/<app>:dev, IfNotPresent).
+  sudo k3s ctr images tag --force "$src" "docker.io/ccl/${img}:dev"
 done
 
 echo ">> aplica os manifests"
