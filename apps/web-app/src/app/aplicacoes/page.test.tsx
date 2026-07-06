@@ -12,22 +12,23 @@ describe("Aplicacoes", () => {
     ).toBeInTheDocument();
   });
 
-  it("links online apps to their subdomain", () => {
+  it("shows only the url-shortener app, linked to its subdomain", () => {
     render(<Aplicacoes />);
 
     expect(
-      screen.getByRole("link", { name: /code-cleaner/i }),
-    ).toHaveAttribute("href", "http://code-cleaner.ccl.app.br");
+      screen.getByRole("link", { name: /url-shortener/i }),
+    ).toHaveAttribute("href", "https://url-shortener.ccl.app.br");
+
+    // demais cards foram removidos
+    expect(screen.queryByText("code-cleaner")).not.toBeInTheDocument();
+    expect(screen.queryByText("mobile-app")).not.toBeInTheDocument();
+    expect(screen.queryByText("docs")).not.toBeInTheDocument();
   });
 
-  it("shows upcoming apps without links and with their stack", () => {
+  it("marks the app online, with no upcoming apps", () => {
     render(<Aplicacoes />);
 
-    expect(screen.getByText("mobile-app")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /mobile-app/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.getAllByText(/em breve/i).length).toBeGreaterThan(0);
-    expect(screen.getByText("React Native")).toBeInTheDocument();
+    expect(screen.getByText("online")).toBeInTheDocument();
+    expect(screen.queryByText(/em breve/i)).not.toBeInTheDocument();
   });
 });

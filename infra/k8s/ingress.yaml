@@ -1,18 +1,40 @@
-# Roteamento por subdomínio sob o domínio pai ccl.app.br:
+# Roteamento por host sob o domínio pai ccl.app.br:
+#   ccl.app.br                   -> web-app (apex serve a página principal)
 #   code-cleaner.ccl.app.br      -> web-app (página principal)
 #   api.code-cleaner.ccl.app.br  -> backend-api
+#   url-shortener.ccl.app.br     -> url-shortener
 #
 # Para cada novo app, adicione regras seguindo o padrão:
 #   <app>.ccl.app.br     -> service do app
 #   api.<app>.ccl.app.br -> API do app (se houver)
-# O domínio raiz ccl.app.br fica reservado para um futuro hub/landing.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ccl
+  annotations:
+    # cert-manager emite/renova o cert automaticamente para os hosts em spec.tls.
+    # A emissão (HTTP-01) só completa depois que o DNS apontar p/ o cluster.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - ccl.app.br
+        - code-cleaner.ccl.app.br
+        - api.code-cleaner.ccl.app.br
+        - url-shortener.ccl.app.br
+      secretName: ccl-tls
   rules:
+    - host: ccl.app.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-app
+                port:
+                  number: 3000
     - host: code-cleaner.ccl.app.br
       http:
         paths:
@@ -31,5 +53,15 @@ spec:
             backend:
               service:
                 name: backend-api
+                port:
+                  number: 8080
+    - host: url-shortener.ccl.app.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: url-shortener
                 port:
                   number: 8080

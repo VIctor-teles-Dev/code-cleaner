@@ -1,0 +1,35 @@
+# ClusterIssuers do Let's Encrypt (ACME HTTP-01 via ingress-nginx).
+# Pré-requisito: cert-manager instalado no cluster (CRDs cert-manager.io).
+# O desafio HTTP-01 exige que o domínio RESOLVA para o IP do cluster — a emissão
+# só completa depois que o DNS (A -> 108.174.147.228) estiver propagado.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: victoreduardoteleschaves@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx
+---
+# Staging: use p/ testar sem gastar o rate limit do LE de produção
+# (troque a annotation do ingress para letsencrypt-staging).
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: victoreduardoteleschaves@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx
