@@ -82,12 +82,9 @@
 }
 
 @media (max-width: 760px) {
+  /* No mobile a navegação vira a tab bar fixa no rodapé (MobileTabBar). */
   .nav {
-    flex-basis: 100%;
-    justify-content: flex-start;
-    overflow-x: auto;
-    margin: 0 -12px;
-    padding: 0 8px 4px;
+    display: none;
   }
 
   .wordmark {

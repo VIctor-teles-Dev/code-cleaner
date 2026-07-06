@@ -34,6 +34,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* No mobile, a tab bar fixa ocupa o rodapé — reserva espaço p/ o conteúdo. */
+@media (max-width: 760px) {
+  body {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+}
+
 * {
   box-sizing: border-box;
   padding: 0;

@@ -1,0 +1,54 @@
+/* Tab bar fixa no rodapé — só aparece em telas de celular; no desktop fica
+   escondida (a navbar de links do site-header assume). */
+.bar {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .bar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 50;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    align-items: stretch;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--background) 90%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px 4px 8px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
+}
+
+.icon {
+  width: 23px;
+  height: 23px;
+}
+
+.label {
+  letter-spacing: -0.01em;
+}
+
+.active {
+  color: var(--brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+}
