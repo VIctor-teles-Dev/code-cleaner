@@ -3,7 +3,8 @@ kind: Deployment
 metadata:
   name: backend-api
 spec:
-  replicas: 2
+  # 1 réplica: a VPS tem só 1.9 GB. Suba de novo se migrar p/ um host maior.
+  replicas: 1
   selector:
     matchLabels:
       app: backend-api

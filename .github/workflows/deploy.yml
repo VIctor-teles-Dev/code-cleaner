@@ -1,8 +1,10 @@
 name: Deploy
 
-# Roda DEPOIS que o CI passa num push para a main. O job executa num runner
-# self-hosted NA VPS: ele puxa o repo (checkout), builda as imagens e aplica
-# no cluster k3s via infra/deploy.sh.
+# Roda DEPOIS que o CI passa num push para a main. Dois jobs:
+#  - build:  builda as 3 imagens num runner do GitHub (RAM sobrando) e publica
+#            no GHCR. Buildar na VPS (1.9 GB) estourava a RAM (OOM) — por isso saiu.
+#  - deploy: runner self-hosted NA VPS que só BAIXA as imagens do GHCR, importa
+#            no k3s e aplica os manifests.
 on:
   workflow_run:
     workflows: ["CI"]
@@ -15,14 +17,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    # Só deploya se o CI concluiu com sucesso.
+  build:
+    # Só builda se o CI concluiu com sucesso.
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Builda exatamente o commit que passou no CI.
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & push das imagens
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          reg="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')"
+          docker build -t "$reg/ccl-backend-api:$SHA"   apps/backend-api
+          docker build -t "$reg/ccl-url-shortener:$SHA" apps/url-shortener
+          docker build -f apps/web-app/Dockerfile -t "$reg/ccl-web-app:$SHA" .
+          for img in ccl-backend-api ccl-url-shortener ccl-web-app; do
+            docker push "$reg/$img:$SHA"
+          done
+
+  deploy:
+    needs: build
     runs-on: [self-hosted, ccl-vps]
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
         with:
           # Deploya exatamente o commit que passou no CI.
           ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Deploy no k3s
+      - name: Deploy no k3s (só pull, sem build)
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          OWNER: ${{ github.repository_owner }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash infra/deploy.sh

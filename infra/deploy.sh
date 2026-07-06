@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
-# Deploy no cluster k3s da VPS: builda as imagens, importa no containerd do
-# k3s, aplica os manifests e reinicia os deployments. Idempotente — pode rodar
-# quantas vezes for preciso. Chamado pelo workflow de CD (runner self-hosted)
-# ou à mão na VPS.
+# Deploy no cluster k3s da VPS. As imagens já vêm BUILDADAS do GHCR (job "build"
+# do .github/workflows/deploy.yml roda num runner do GitHub) — aqui só baixamos e
+# importamos no k3s. Buildar na VPS (1.9 GB) estourava a RAM (OOM), por isso o
+# build saiu daqui. Idempotente — pode rodar quantas vezes for preciso.
 #
-# Requisitos na VPS: docker, k3s instalado, e `sudo` sem senha para o `k3s`.
+# Requisitos na VPS: docker, k3s, sudo sem senha p/ o k3s, e as variáveis
+# SHA / OWNER / GHCR_USER / GHCR_TOKEN (injetadas pelo workflow de Deploy).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-echo ">> build das imagens"
-docker build -t ccl/backend-api:dev apps/backend-api
-docker build -t ccl/url-shortener:dev apps/url-shortener
-docker build -f apps/web-app/Dockerfile -t ccl/web-app:dev .
+: "${SHA:?SHA não definido (é injetado pelo workflow)}"
+reg="ghcr.io/$(echo "${OWNER:-victor-teles-dev}" | tr '[:upper:]' '[:lower:]')"
 
-echo ">> importa as imagens no containerd do k3s"
+echo ">> login no GHCR"
+echo "${GHCR_TOKEN:?}" | docker login ghcr.io -u "${GHCR_USER:?}" --password-stdin
+
+echo ">> pull das imagens do GHCR + import no containerd do k3s"
 for img in backend-api url-shortener web-app; do
+  docker pull "$reg/ccl-${img}:$SHA"
+  # Re-tag para o nome local que os manifests usam (ccl/<app>:dev, IfNotPresent).
+  docker tag "$reg/ccl-${img}:$SHA" "ccl/${img}:dev"
   docker save "ccl/${img}:dev" | sudo k3s ctr images import -
 done
 
