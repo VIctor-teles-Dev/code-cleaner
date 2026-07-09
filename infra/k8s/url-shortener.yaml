@@ -20,6 +20,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            # Base pública dos links. Sem ela o binário DESABILITA o redirect
+            # (GET /{slug}) e o analytics, e devolve short_url relativo (sem host)
+            # — o link some no vazio. Precisa ser o host do Ingress deste app.
+            - name: BASE_URL
+              value: https://url-shortener.ccl.app.br
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:

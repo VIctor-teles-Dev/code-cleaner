@@ -31,7 +31,7 @@ describe("ContactForm", () => {
       "/api/contact",
       expect.objectContaining({ method: "POST" }),
     );
-    const payload = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    const payload = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
     expect(payload).toEqual({
       name: "Ana",
       email: "ana@example.com",

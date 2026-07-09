@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
+import { AnalyticsDashboard, type Analytics } from "./analytics-dashboard";
 import styles from "./page.module.css";
 
 interface CreatedLink {
@@ -11,34 +12,20 @@ interface CreatedLink {
   expires_at: string | null;
 }
 
-interface LabelCount {
-  label: string;
-  count: number;
-}
-
-interface DayCount {
-  day: string;
-  count: number;
-}
-
-interface Analytics {
-  slug: string;
-  total_clicks: number;
-  time_series: DayCount[];
-  top_countries: LabelCount[];
-  top_referrers: LabelCount[];
-  browsers: LabelCount[];
-  devices: LabelCount[];
-}
-
 type CreateStatus = "idle" | "sending" | "error";
 type StatsStatus = "idle" | "loading" | "error";
+type Copied = "short" | "analytics" | null;
+
+// Caminho (same-origin) da página de análise de um slug.
+function analyticsPath(slug: string): string {
+  return `/encurtador/analise/${slug}`;
+}
 
 export function EncurtadorForm() {
   const [createStatus, setCreateStatus] = useState<CreateStatus>("idle");
   const [createError, setCreateError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedLink | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<Copied>(null);
 
   const [slugQuery, setSlugQuery] = useState("");
   const [statsStatus, setStatsStatus] = useState<StatsStatus>("idle");
@@ -58,7 +45,7 @@ export function EncurtadorForm() {
 
     setCreateStatus("sending");
     setCreateError(null);
-    setCopied(false);
+    setCopied(null);
 
     try {
       const res = await fetch("/api/encurtador/urls", {
@@ -119,15 +106,18 @@ export function EncurtadorForm() {
     }
   }
 
-  async function copyShortUrl() {
-    if (!created) return;
+  async function copy(kind: "short" | "analytics", text: string) {
     try {
-      await navigator.clipboard.writeText(created.short_url);
-      setCopied(true);
+      await navigator.clipboard.writeText(text);
+      setCopied(kind);
     } catch {
       /* clipboard indisponível: ignora silenciosamente */
     }
   }
+
+  const analyticsUrl = created
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}${analyticsPath(created.slug)}`
+    : "";
 
   return (
     <>
@@ -179,24 +169,50 @@ export function EncurtadorForm() {
 
       {created && (
         <div className={styles.result} role="status">
-          <span className={styles.resultLabel}>Link curto</span>
-          <div className={styles.resultRow}>
-            <a
-              className={styles.resultUrl}
-              href={created.short_url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {created.short_url}
-            </a>
-            <button
-              type="button"
-              className={styles.copyButton}
-              onClick={copyShortUrl}
-            >
-              {copied ? "copiado ✓" : "copiar"}
-            </button>
+          <div className={styles.resultGroup}>
+            <span className={styles.resultLabel}>Link curto</span>
+            <div className={styles.resultRow}>
+              <a
+                className={styles.resultUrl}
+                href={created.short_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {created.short_url}
+              </a>
+              <button
+                type="button"
+                className={styles.copyButton}
+                onClick={() => copy("short", created.short_url)}
+              >
+                {copied === "short" ? "copiado ✓" : "copiar"}
+              </button>
+            </div>
           </div>
+
+          <div className={styles.resultGroup}>
+            <span className={styles.resultLabel}>Link de análise</span>
+            <div className={styles.resultRow}>
+              <a
+                className={styles.resultUrl}
+                href={analyticsPath(created.slug)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {analyticsUrl || analyticsPath(created.slug)}
+              </a>
+              <button
+                type="button"
+                className={styles.copyButton}
+                onClick={() =>
+                  copy("analytics", analyticsUrl || analyticsPath(created.slug))
+                }
+              >
+                {copied === "analytics" ? "copiado ✓" : "copiar"}
+              </button>
+            </div>
+          </div>
+
           <p className={styles.resultOriginal}>→ {created.original_url}</p>
         </div>
       )}
@@ -227,96 +243,8 @@ export function EncurtadorForm() {
           </p>
         )}
 
-        {analytics && (
-          <div className={styles.dashboard}>
-            <div className={styles.total}>
-              <span className={styles.totalNumber}>
-                {analytics.total_clicks}
-              </span>
-              <span className={styles.totalLabel}>
-                {analytics.total_clicks === 1 ? "clique" : "cliques"} em{" "}
-                <code>{analytics.slug}</code>
-              </span>
-            </div>
-
-            <div className={styles.panels}>
-              <BarList
-                title="Cliques por dia"
-                items={analytics.time_series.map((d) => ({
-                  label: formatDay(d.day),
-                  count: d.count,
-                }))}
-                empty="Sem cliques ainda."
-              />
-              <BarList
-                title="Países"
-                items={analytics.top_countries}
-                empty="Sem dados de país."
-              />
-              <BarList
-                title="Navegadores"
-                items={analytics.browsers}
-                empty="Sem dados."
-              />
-              <BarList
-                title="Dispositivos"
-                items={analytics.devices}
-                empty="Sem dados."
-              />
-              <BarList
-                title="Referrers"
-                items={analytics.top_referrers}
-                empty="Acessos diretos."
-              />
-            </div>
-          </div>
-        )}
+        {analytics && <AnalyticsDashboard analytics={analytics} />}
       </section>
     </>
   );
-}
-
-function BarList({
-  title,
-  items,
-  empty,
-}: {
-  title: string;
-  items: LabelCount[];
-  empty: string;
-}) {
-  const max = items.reduce((m, i) => Math.max(m, i.count), 0) || 1;
-  return (
-    <div className={styles.panel}>
-      <h3 className={styles.panelTitle}>{title}</h3>
-      {items.length === 0 ? (
-        <p className={styles.panelEmpty}>{empty}</p>
-      ) : (
-        <ul className={styles.bars}>
-          {items.map((item) => (
-            <li key={item.label} className={styles.barRow}>
-              <span className={styles.barLabel} title={item.label}>
-                {item.label}
-              </span>
-              <span className={styles.barTrack}>
-                <span
-                  className={styles.barFill}
-                  style={{ width: `${(item.count / max) * 100}%` }}
-                />
-              </span>
-              <span className={styles.barCount}>{item.count}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function formatDay(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "UTC",
-  }).format(new Date(iso));
 }
