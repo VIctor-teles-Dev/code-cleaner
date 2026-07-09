@@ -32,12 +32,26 @@ type Store interface {
 	// ListPublished retorna os posts publicados, do mais recente ao mais
 	// antigo. tagSlug vazio lista todos; preenchido, filtra pela tag.
 	ListPublished(ctx context.Context, tagSlug string) ([]Post, error)
+	// ListAll retorna todos os posts (inclusive rascunhos), do mais recente
+	// ao mais antigo. Uso exclusivo do admin.
+	ListAll(ctx context.Context) ([]Post, error)
 	// GetPublishedBySlug retorna ErrNotFound quando o post não existe
 	// ou ainda não foi publicado.
 	GetPublishedBySlug(ctx context.Context, slug string) (Post, error)
+	// GetBySlug retorna o post por slug independente de publicação
+	// (para edição no admin). ErrNotFound quando não existe.
+	GetBySlug(ctx context.Context, slug string) (Post, error)
 	// Create persiste o post e faz upsert das tags pelo slug.
 	// Retorna ErrDuplicateSlug quando o slug do post já está em uso.
 	Create(ctx context.Context, post Post) error
+	// Update altera título, conteúdo, publicação e tags do post identificado
+	// por post.Slug (o slug em si é imutável). PublishedAt nil despublica;
+	// não-nil publica preservando a data original se já era publicado.
+	// Retorna ErrNotFound quando o slug não existe.
+	Update(ctx context.Context, post Post) error
+	// Delete remove o post (e seus vínculos de tag) pelo slug.
+	// Retorna ErrNotFound quando o slug não existe.
+	Delete(ctx context.Context, slug string) error
 }
 
 var (
