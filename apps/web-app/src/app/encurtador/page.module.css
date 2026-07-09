@@ -9,6 +9,20 @@
   margin: 0 auto;
 }
 
+.back {
+  display: inline-block;
+  margin-bottom: 24px;
+  font-family: var(--font-geist-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.back:hover {
+  color: var(--brand);
+}
+
 .eyebrow {
   margin-bottom: 12px;
   font-family: var(--font-geist-mono);
@@ -131,6 +145,10 @@
   border: 1px solid var(--border-strong);
   border-radius: 14px;
   background: var(--surface);
+}
+
+.resultGroup + .resultGroup {
+  margin-top: 20px;
 }
 
 .resultLabel {
