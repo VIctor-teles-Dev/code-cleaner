@@ -1,0 +1,14 @@
+# Strategic merge: no dev, a base pública do encurtador é o host local, então
+# short_url vira http://url-shortener.localhost/<slug> (e não o de prod).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener
+spec:
+  template:
+    spec:
+      containers:
+        - name: url-shortener
+          env:
+            - name: BASE_URL
+              value: http://url-shortener.localhost

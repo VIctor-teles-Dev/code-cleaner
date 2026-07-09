@@ -65,17 +65,26 @@ docker build -t ccl/backend-api:dev apps/backend-api
 docker build -f apps/web-app/Dockerfile -t ccl/web-app:dev .
 kind load docker-image ccl/web-app:dev ccl/backend-api:dev --name ccl
 
-# 4. Aplique os manifests
-kubectl apply -k infra/k8s
+# 4. Aplique os manifests — overlay de DEV (hosts *.localhost, HTTP, sem TLS).
+#    NÃO use `infra/k8s` direto no kind: ele roteia pelos domínios REAIS de prod
+#    e, com o /etc/hosts abaixo, o navegador para de enxergar o site no ar.
+kubectl apply -k infra/overlays/local
 
-# 5. Aponte os domínios para localhost
-echo "127.0.0.1 ccl.app.br code-cleaner.ccl.app.br api.code-cleaner.ccl.app.br" | sudo tee -a /etc/hosts
+# 5. Aponte os hosts de DEV para 127.0.0.1. Use *.localhost (não os *.ccl.app.br
+#    de prod!). O IP explícito é de propósito: o kind só mapeia IPv4, e sem a
+#    linha o *.localhost cai em ::1 (IPv6) e não conecta.
+#    Se você já colou os *.ccl.app.br no /etc/hosts antes, REMOVA aquelas linhas.
+echo "127.0.0.1 ccl.localhost code-cleaner.localhost api.code-cleaner.localhost url-shortener.localhost" | sudo tee -a /etc/hosts
 
-# 6. Acesse
-curl http://code-cleaner.ccl.app.br/api/health
-curl http://api.code-cleaner.ccl.app.br/healthz   # liveness (processo no ar)
-curl http://api.code-cleaner.ccl.app.br/readyz    # readiness (inclui ping no PostgreSQL)
+# 6. Acesse (HTTP). Prod segue em *.ccl.app.br resolvendo pro VPS, sem colisão.
+curl http://code-cleaner.localhost/api/health
+curl http://api.code-cleaner.localhost/healthz   # liveness (processo no ar)
+curl http://api.code-cleaner.localhost/readyz    # readiness (inclui ping no PostgreSQL)
 ```
+
+> **Dev vs. prod:** o kind usa `infra/overlays/local` (hosts `*.localhost`, HTTP);
+> a VPS usa `infra/k8s` direto (hosts `*.ccl.app.br`, HTTPS via cert-manager).
+> Assim o cluster local nunca sombreia os domínios reais.
 
 ## Secrets (Sealed Secrets)
 
