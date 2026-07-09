@@ -95,4 +95,73 @@ func TestPostStore(t *testing.T) {
 	if tagCount != 1 {
 		t.Errorf("tags com mesmo slug = %d, want 1 (upsert)", tagCount)
 	}
+
+	// ListAll inclui rascunhos (publicado, rascunho, segundo = 3)
+	all, err := store.ListAll(ctx)
+	if err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	if len(all) != 3 {
+		t.Errorf("ListAll = %d posts, want 3 (inclui rascunho)", len(all))
+	}
+	if _, err := store.GetBySlug(ctx, "rascunho"); err != nil {
+		t.Errorf("GetBySlug(rascunho) = %v, want nil (inclui rascunho)", err)
+	}
+
+	// Update publica o rascunho e troca título/tags
+	toPublish := blog.Post{Slug: "rascunho", Title: "Publicado agora", Content: "corpo",
+		PublishedAt: &now, Tags: []blog.Tag{tag}}
+	if err := store.Update(ctx, toPublish); err != nil {
+		t.Fatalf("Update(rascunho): %v", err)
+	}
+	pub, err := store.GetPublishedBySlug(ctx, "rascunho")
+	if err != nil {
+		t.Errorf("GetPublishedBySlug(rascunho após publicar) = %v, want nil", err)
+	}
+	if pub.Title != "Publicado agora" || len(pub.Tags) != 1 {
+		t.Errorf("post publicado = %+v, want título e tag novos", pub)
+	}
+
+	// Update de post já publicado preserva a data de publicação original
+	orig, err := store.GetPublishedBySlug(ctx, "publicado")
+	if err != nil {
+		t.Fatalf("GetPublishedBySlug(publicado): %v", err)
+	}
+	later := now.Add(48 * time.Hour)
+	if err := store.Update(ctx, blog.Post{Slug: "publicado", Title: "Editado",
+		Content: "c", PublishedAt: &later}); err != nil {
+		t.Fatalf("Update(publicado): %v", err)
+	}
+	kept, err := store.GetPublishedBySlug(ctx, "publicado")
+	if err != nil {
+		t.Fatalf("GetPublishedBySlug(publicado após editar): %v", err)
+	}
+	if !kept.PublishedAt.Equal(*orig.PublishedAt) {
+		t.Errorf("published_at = %v, want preservado (%v) ao reeditar publicado",
+			kept.PublishedAt, orig.PublishedAt)
+	}
+
+	// Update com published=false (PublishedAt nil) despublica
+	if err := store.Update(ctx, blog.Post{Slug: "publicado", Title: "Editado", Content: "c"}); err != nil {
+		t.Fatalf("Update(despublicar): %v", err)
+	}
+	if _, err := store.GetPublishedBySlug(ctx, "publicado"); !errors.Is(err, blog.ErrNotFound) {
+		t.Errorf("GetPublishedBySlug(despublicado) = %v, want ErrNotFound", err)
+	}
+
+	// Update de slug inexistente
+	if err := store.Update(ctx, blog.Post{Slug: "inexistente", Title: "T", Content: "c"}); !errors.Is(err, blog.ErrNotFound) {
+		t.Errorf("Update(inexistente) = %v, want ErrNotFound", err)
+	}
+
+	// Delete remove o post e devolve ErrNotFound quando não existe
+	if err := store.Delete(ctx, "segundo"); err != nil {
+		t.Fatalf("Delete(segundo): %v", err)
+	}
+	if _, err := store.GetBySlug(ctx, "segundo"); !errors.Is(err, blog.ErrNotFound) {
+		t.Errorf("GetBySlug(segundo após delete) = %v, want ErrNotFound", err)
+	}
+	if err := store.Delete(ctx, "segundo"); !errors.Is(err, blog.ErrNotFound) {
+		t.Errorf("Delete(inexistente) = %v, want ErrNotFound", err)
+	}
 }

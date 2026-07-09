@@ -36,6 +36,28 @@ spec:
                 secretKeyRef:
                   name: url-shortener-admin-token
                   key: URL_SHORTENER_ADMIN_TOKEN
+            # Admin do blog (/admin): a senha protege a UI; o BLOG_ADMIN_TOKEN
+            # (mesmo Secret do backend) é injetado nos proxies /api/admin/* p/
+            # falar com a API pública. Os dois secrets abaixo são opcionais para
+            # a app subir antes de serem selados — sem eles, o login fica travado.
+            # Gere-os com kubeseal (ver infra/README "Admin do blog").
+            - name: BLOG_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: blog-admin-token
+                  key: BLOG_ADMIN_TOKEN
+            - name: ADMIN_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: admin-password-hash
+                  key: ADMIN_PASSWORD_HASH
+                  optional: true
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: session-secret
+                  key: SESSION_SECRET
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/health

@@ -73,6 +73,30 @@ type apiError struct {
 	Error  string `json:"error,omitempty"`
 }
 
+func toSummaries(posts []blog.Post) []postSummary {
+	summaries := make([]postSummary, 0, len(posts))
+	for _, p := range posts {
+		summaries = append(summaries, postSummary{
+			Slug:        p.Slug,
+			Title:       p.Title,
+			Excerpt:     excerpt(p.Content),
+			PublishedAt: p.PublishedAt,
+			Tags:        toTagJSON(p.Tags),
+		})
+	}
+	return summaries
+}
+
+func toPostDetail(p blog.Post) postDetail {
+	return postDetail{
+		Slug:        p.Slug,
+		Title:       p.Title,
+		Content:     p.Content,
+		PublishedAt: p.PublishedAt,
+		Tags:        toTagJSON(p.Tags),
+	}
+}
+
 // ListPosts responde GET /posts com os posts publicados.
 func ListPosts(store blog.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -88,17 +112,26 @@ func ListPosts(store blog.Store) http.HandlerFunc {
 			return
 		}
 
-		summaries := make([]postSummary, 0, len(posts))
-		for _, p := range posts {
-			summaries = append(summaries, postSummary{
-				Slug:        p.Slug,
-				Title:       p.Title,
-				Excerpt:     excerpt(p.Content),
-				PublishedAt: p.PublishedAt,
-				Tags:        toTagJSON(p.Tags),
-			})
+		writeJSON(w, http.StatusOK, toSummaries(posts))
+	}
+}
+
+// ListAllPosts responde GET /admin/posts com todos os posts, inclusive
+// rascunhos. Protegido por bearer token (uso do admin).
+func ListAllPosts(store blog.Store, token string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r, store, token) {
+			return
 		}
-		writeJSON(w, http.StatusOK, summaries)
+
+		posts, err := store.ListAll(r.Context())
+		if err != nil {
+			log.Printf("posts: admin list failed: %v", err)
+			writeJSON(w, http.StatusInternalServerError, apiError{Status: "error"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, toSummaries(posts))
 	}
 }
 
@@ -121,13 +154,30 @@ func GetPost(store blog.Store) http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, postDetail{
-			Slug:        post.Slug,
-			Title:       post.Title,
-			Content:     post.Content,
-			PublishedAt: post.PublishedAt,
-			Tags:        toTagJSON(post.Tags),
-		})
+		writeJSON(w, http.StatusOK, toPostDetail(post))
+	}
+}
+
+// GetAnyPost responde GET /admin/posts/{slug} com o post completo,
+// publicado ou rascunho. Protegido por bearer token (edição no admin).
+func GetAnyPost(store blog.Store, token string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r, store, token) {
+			return
+		}
+
+		post, err := store.GetBySlug(r.Context(), r.PathValue("slug"))
+		if errors.Is(err, blog.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, apiError{Status: "not_found"})
+			return
+		}
+		if err != nil {
+			log.Printf("posts: admin get failed: %v", err)
+			writeJSON(w, http.StatusInternalServerError, apiError{Status: "error"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, toPostDetail(post))
 	}
 }
 
@@ -141,23 +191,32 @@ type createPostRequest struct {
 	Tags      []string `json:"tags"`
 }
 
+// updatePostRequest é o corpo do PUT /posts/{slug}: sem slug, que vem do path
+// e é imutável.
+type updatePostRequest struct {
+	Title     string   `json:"title"`
+	Content   string   `json:"content"`
+	Published bool     `json:"published"`
+	Tags      []string `json:"tags"`
+}
+
 const (
 	maxTags     = 10
 	maxTagRunes = 50
 )
 
-func validatePost(req createPostRequest) string {
+// validateFields valida o que create e update têm em comum (título, conteúdo
+// e tags). Retorna string vazia quando válido.
+func validateFields(title, content string, tags []string) string {
 	switch {
-	case !slugPattern.MatchString(req.Slug):
-		return "slug inválido (use letras minúsculas, números e hífens)"
-	case strings.TrimSpace(req.Title) == "":
+	case strings.TrimSpace(title) == "":
 		return "informe o título"
-	case strings.TrimSpace(req.Content) == "":
+	case strings.TrimSpace(content) == "":
 		return "informe o conteúdo"
-	case len(req.Tags) > maxTags:
+	case len(tags) > maxTags:
 		return "muitas tags (máximo 10)"
 	}
-	for _, tag := range req.Tags {
+	for _, tag := range tags {
 		trimmed := strings.TrimSpace(tag)
 		if trimmed == "" || utf8.RuneCountInString(trimmed) > maxTagRunes ||
 			blog.Slugify(trimmed) == "" {
@@ -167,18 +226,60 @@ func validatePost(req createPostRequest) string {
 	return ""
 }
 
+func validatePost(req createPostRequest) string {
+	if !slugPattern.MatchString(req.Slug) {
+		return "slug inválido (use letras minúsculas, números e hífens)"
+	}
+	return validateFields(req.Title, req.Content, req.Tags)
+}
+
+// toTags normaliza nomes de tags (slug + nome original) para persistência.
+func toTags(names []string) []blog.Tag {
+	tags := make([]blog.Tag, 0, len(names))
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		tags = append(tags, blog.Tag{Slug: blog.Slugify(name), Name: name})
+	}
+	return tags
+}
+
+// publishedAt devolve o carimbo de publicação: agora (UTC) quando published,
+// nil para rascunho. Em updates, nil despublica e não-nil preserva a data
+// original (ver PostStore.Update).
+func publishedAt(published bool) *time.Time {
+	if !published {
+		return nil
+	}
+	now := time.Now().UTC()
+	return &now
+}
+
+// authorized confere o header Authorization: Bearer <token> em tempo constante.
+func authorized(r *http.Request, token string) bool {
+	got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	return ok && subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1
+}
+
+// requireAuth garante store configurado e token válido, escrevendo a resposta
+// de erro (503 sem configuração, 401 sem/errado token) e devolvendo false
+// quando a requisição não deve prosseguir.
+func requireAuth(w http.ResponseWriter, r *http.Request, store blog.Store, token string) bool {
+	if store == nil || token == "" {
+		writeJSON(w, http.StatusServiceUnavailable, apiError{Status: "unavailable"})
+		return false
+	}
+	if !authorized(r, token) {
+		writeJSON(w, http.StatusUnauthorized, apiError{Status: "unauthorized"})
+		return false
+	}
+	return true
+}
+
 // CreatePost responde POST /posts, protegido por bearer token. Token vazio
 // desabilita o endpoint (503) — escrita só é possível quando configurada.
 func CreatePost(store blog.Store, token string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if store == nil || token == "" {
-			writeJSON(w, http.StatusServiceUnavailable, apiError{Status: "unavailable"})
-			return
-		}
-
-		got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
-			writeJSON(w, http.StatusUnauthorized, apiError{Status: "unauthorized"})
+		if !requireAuth(w, r, store, token) {
 			return
 		}
 
@@ -195,17 +296,11 @@ func CreatePost(store blog.Store, token string) http.HandlerFunc {
 		}
 
 		post := blog.Post{
-			Slug:    req.Slug,
-			Title:   strings.TrimSpace(req.Title),
-			Content: req.Content,
-		}
-		if req.Published {
-			now := time.Now().UTC()
-			post.PublishedAt = &now
-		}
-		for _, tag := range req.Tags {
-			name := strings.TrimSpace(tag)
-			post.Tags = append(post.Tags, blog.Tag{Slug: blog.Slugify(name), Name: name})
+			Slug:        req.Slug,
+			Title:       strings.TrimSpace(req.Title),
+			Content:     req.Content,
+			PublishedAt: publishedAt(req.Published),
+			Tags:        toTags(req.Tags),
 		}
 
 		err := store.Create(r.Context(), post)
@@ -220,12 +315,71 @@ func CreatePost(store blog.Store, token string) http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusCreated, postDetail{
-			Slug:        post.Slug,
-			Title:       post.Title,
-			Content:     post.Content,
-			PublishedAt: post.PublishedAt,
-			Tags:        toTagJSON(post.Tags),
-		})
+		writeJSON(w, http.StatusCreated, toPostDetail(post))
+	}
+}
+
+// UpdatePost responde PUT /posts/{slug}: edita um post existente (o slug é
+// imutável). Protegido por bearer token.
+func UpdatePost(store blog.Store, token string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r, store, token) {
+			return
+		}
+
+		var req updatePostRequest
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSON(w, http.StatusBadRequest,
+				apiError{Status: "invalid", Error: "corpo da requisição inválido"})
+			return
+		}
+		if msg := validateFields(req.Title, req.Content, req.Tags); msg != "" {
+			writeJSON(w, http.StatusBadRequest, apiError{Status: "invalid", Error: msg})
+			return
+		}
+
+		post := blog.Post{
+			Slug:        r.PathValue("slug"),
+			Title:       strings.TrimSpace(req.Title),
+			Content:     req.Content,
+			PublishedAt: publishedAt(req.Published),
+			Tags:        toTags(req.Tags),
+		}
+
+		err := store.Update(r.Context(), post)
+		if errors.Is(err, blog.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, apiError{Status: "not_found"})
+			return
+		}
+		if err != nil {
+			log.Printf("posts: update failed: %v", err)
+			writeJSON(w, http.StatusInternalServerError, apiError{Status: "error"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, toPostDetail(post))
+	}
+}
+
+// DeletePost responde DELETE /posts/{slug}. Protegido por bearer token.
+func DeletePost(store blog.Store, token string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireAuth(w, r, store, token) {
+			return
+		}
+
+		err := store.Delete(r.Context(), r.PathValue("slug"))
+		if errors.Is(err, blog.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, apiError{Status: "not_found"})
+			return
+		}
+		if err != nil {
+			log.Printf("posts: delete failed: %v", err)
+			writeJSON(w, http.StatusInternalServerError, apiError{Status: "error"})
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

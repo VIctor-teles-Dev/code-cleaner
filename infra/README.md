@@ -145,10 +145,43 @@ kubectl exec -n ccl postgres-0 -- psql -U ccl -d ccl \
 
 ## Publicando no blog
 
-Os posts vivem na tabela `posts` e saem pela API (`GET /posts`,
-`GET /posts/{slug}`). A escrita é o `POST /posts`, protegido pelo token
-`BLOG_ADMIN_TOKEN` (SealedSecret `blog-admin-token` no repo; o valor em
-claro fica em `~/.config/ccl/blog-admin-token`). Conteúdo em Markdown:
+Os posts vivem na tabela `posts` e saem pela API pública (`GET /posts`,
+`GET /posts/{slug}`). A escrita mora atrás de duas fronteiras distintas:
+
+- **`/admin` (UI)** — protegida por **senha**, faz o CRUD completo (criar,
+  editar, publicar/despublicar, excluir). A senha protege "humano → UI".
+- **`POST/PUT/DELETE /posts`** (backend) — protegidos pelo `BLOG_ADMIN_TOKEN`.
+  Esse token protege "internet → API pública" e é injetado no servidor pelos
+  proxies `/api/admin/*` do Next; **nunca chega ao navegador**.
+
+### Configurando o admin (uma vez)
+
+Além do `blog-admin-token` (já no repo), o admin precisa de dois secrets
+selados. Rode de `infra/`:
+
+```bash
+# 1. Hash da senha (a senha em si nunca é guardada)
+HASH=$(cd ../apps/web-app && node scripts/hash-password.mjs 'sua-senha-forte')
+kubectl create secret generic admin-password-hash -n ccl \
+  --from-literal=ADMIN_PASSWORD_HASH="$HASH" --dry-run=client -o yaml |
+  kubeseal --format yaml > k8s/admin-password-hash-sealed-secret.yaml
+
+# 2. Segredo para assinar o cookie de sessão
+kubectl create secret generic session-secret -n ccl \
+  --from-literal=SESSION_SECRET="$(openssl rand -base64 32)" --dry-run=client -o yaml |
+  kubeseal --format yaml > k8s/session-secret-sealed-secret.yaml
+
+# 3. Adicione os dois arquivos em k8s/kustomization.yaml, então:
+kubectl apply -k k8s
+kubectl rollout restart deploy/web-app -n ccl
+```
+
+Sem esses secrets a app sobe normalmente (os env refs são `optional`), mas o
+login do `/admin` fica travado. Depois é só acessar `https://code-cleaner.ccl.app.br/admin`.
+
+### API direta (alternativa ao painel)
+
+O mesmo token dá pra publicar via `curl`. Conteúdo em Markdown:
 
 ```bash
 TOKEN=$(cat ~/.config/ccl/blog-admin-token)
@@ -164,9 +197,9 @@ curl -X POST http://api.code-cleaner.ccl.app.br/posts \
   }'
 ```
 
-`"published": false` cria um rascunho, que não aparece na listagem nem na
-página até ser publicado (por ora, via SQL: `UPDATE posts SET published_at
-= now() WHERE slug = '...'`).
+`"published": false` cria um **rascunho** (some da listagem pública até ser
+publicado). Pelo painel, o botão *publicar/despublicar* alterna isso; via API,
+`PUT /posts/{slug}` edita e `DELETE /posts/{slug}` remove.
 
 ## Produção (quando chegar a hora)
 

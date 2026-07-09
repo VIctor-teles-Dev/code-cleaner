@@ -21,6 +21,8 @@ services:
     environment:
       PORT: 8080
       DATABASE_URL: postgres://ccl:ccl@postgres:5432/ccl?sslmode=disable
+      # Habilita a escrita do blog (POST/PUT/DELETE /posts). Vazio => desabilitado.
+      BLOG_ADMIN_TOKEN: ${BLOG_ADMIN_TOKEN:-}
     ports:
       # host 8081 -> container 8080 (a 8080 do host está em uso por outro projeto)
       - "8081:8080"
@@ -35,6 +37,11 @@ services:
     environment:
       PORT: 3000
       BACKEND_URL: http://backend-api:8080
+      # Admin do blog (/admin). Sem ADMIN_PASSWORD_HASH/SESSION_SECRET o login
+      # fica desabilitado. Gere o hash com apps/web-app/scripts/hash-password.mjs.
+      BLOG_ADMIN_TOKEN: ${BLOG_ADMIN_TOKEN:-}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
     ports:
       - "3000:3000"
     depends_on:

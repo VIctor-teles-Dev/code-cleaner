@@ -49,7 +49,7 @@ func main() {
 
 	blogToken := os.Getenv("BLOG_ADMIN_TOKEN")
 	if blogToken == "" {
-		log.Print("BLOG_ADMIN_TOKEN not set; POST /posts is disabled")
+		log.Print("BLOG_ADMIN_TOKEN not set; blog write endpoints are disabled")
 	}
 
 	mux := http.NewServeMux()
@@ -59,6 +59,10 @@ func main() {
 	mux.Handle("GET /posts", handler.ListPosts(postStore))
 	mux.Handle("GET /posts/{slug}", handler.GetPost(postStore))
 	mux.Handle("POST /posts", handler.CreatePost(postStore, blogToken))
+	mux.Handle("PUT /posts/{slug}", handler.UpdatePost(postStore, blogToken))
+	mux.Handle("DELETE /posts/{slug}", handler.DeletePost(postStore, blogToken))
+	mux.Handle("GET /admin/posts", handler.ListAllPosts(postStore, blogToken))
+	mux.Handle("GET /admin/posts/{slug}", handler.GetAnyPost(postStore, blogToken))
 
 	log.Printf("backend-api listening on :%s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
