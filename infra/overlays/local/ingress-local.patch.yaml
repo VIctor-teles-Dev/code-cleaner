@@ -1,0 +1,19 @@
+# JSON 6902: reescreve o Ingress `ccl` para dev local.
+# A ordem das regras segue k8s/ingress.yaml: 0=ccl.app.br, 1=code-cleaner,
+# 2=api.code-cleaner, 3=url-shortener.
+- op: remove
+  path: /metadata/annotations/cert-manager.io~1cluster-issuer
+- op: remove
+  path: /spec/tls
+- op: replace
+  path: /spec/rules/0/host
+  value: ccl.localhost
+- op: replace
+  path: /spec/rules/1/host
+  value: code-cleaner.localhost
+- op: replace
+  path: /spec/rules/2/host
+  value: api.code-cleaner.localhost
+- op: replace
+  path: /spec/rules/3/host
+  value: url-shortener.localhost
